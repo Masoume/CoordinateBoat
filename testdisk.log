@@ -1,0 +1,62 @@
+
+
+Thu Jun  5 11:10:05 2014
+Command line: TestDisk
+
+TestDisk 6.13, Data Recovery Utility, November 2011
+Christophe GRENIER <grenier@cgsecurity.org>
+http://www.cgsecurity.org
+OS: Linux, kernel 3.5.0-51-generic (#76-Ubuntu SMP Thu May 15 21:19:10 UTC 2014) x86_64
+Compiler: GCC 4.7
+Compilation date: 2012-10-01T13:00:04
+ext2fs lib: 1.42.5, ntfs lib: libntfs-3g, reiserfs lib: none, ewf lib: none
+/dev/sda: LBA, HPA, LBA48, DCO support
+/dev/sda: size       1465149168 sectors
+/dev/sda: user_max   1465149168 sectors
+/dev/sda: native_max 1465149168 sectors
+/dev/sda: dco        1465149168 sectors
+Warning: can't get size for Disk /dev/mapper/control - 0 B - CHS 1 1 1, sector size=512
+Hard disk list
+Disk /dev/sda - 750 GB / 698 GiB - CHS 91201 255 63, sector size=512 - ST750LX003-1AC154, S/N:W200CMDX, FW:SM12
+Disk /dev/sdb - 32 MB / 30 MiB - CHS 1011 1 62, sector size=512 - Multiple Card  Reader, FW:1.00
+
+Partition table type (auto): Intel
+Disk /dev/sdb - 32 MB / 30 MiB - Multiple Card  Reader
+Partition table type: Intel
+
+Analyse Disk /dev/sdb - 32 MB / 30 MiB - CHS 1011 1 62
+Current partition structure:
+
+Partition sector doesn't have the endmark 0xAA55
+Ask the user for vista mode
+Computes LBA from CHS for Disk /dev/sdb - 32 MB / 30 MiB - CHS 1012 1 62
+Allow partial last cylinder : Yes
+search_vista_part: 1
+
+search_part()
+Disk /dev/sdb - 32 MB / 30 MiB - CHS 1012 1 62
+
+Results
+
+interface_write()
+ 
+No partition found or selected for recovery
+
+search_part()
+Disk /dev/sdb - 32 MB / 30 MiB - CHS 1012 1 62
+
+Results
+
+interface_write()
+ 
+No partition found or selected for recovery
+simulate write!
+
+write_mbr_i386: starting...
+Store new MBR code
+write_all_log_i386: starting...
+No extended partition
+Partition table has been cleared.
+You have to reboot for the change to take effect.
+
+TestDisk exited normally.

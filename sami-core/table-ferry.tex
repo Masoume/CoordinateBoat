@@ -1,0 +1,63 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{rotating}
+
+\title{Test Paper Thesis Ferry}
+\author{Nicolò Marchi}
+\date{November 2014}
+
+\begin{document}
+
+\maketitle
+
+\section{Test Results}
+
+\begin{sidewaystable}[!h]
+\centering
+
+
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+
+\hline 
+ & & & \multicolumn{2}{|c|}{Standard Execution} & \multicolumn{2}{|c|}{Interrupt Execution} & &  \\ 
+\hline 
+ \# Robots & \# Tasks & \# Ferry & \# Interact & Time  &\# Interact & Time  & \% Gain Time & \% Gain Interact \\ 
+\hline \hline
+3 & 20 & 1 & 45 & 207.6 & 25 & 194.8 & 5.7\% [$\pm$ 4,6\%] & 44\% [$\pm$ 0.6\%] \\
+ \hline
+ 5 & 20 & 1 & 41.6 & 139 & 25 & 150.8 & -8.2\% [$\pm$ 7.5\%] & 40\% [$\pm$ 1.4\%] \\
+ \hline
+ 3 & 20 & 3 & 76.6 & 235 & 27 & 256.8 & -8.3\% [$\pm$ 6.3\%] & 65\% [$\pm$ 0.6\%] \\
+ \hline
+ 5 & 20 & 3 & 70.2 & 216.8 & 27 & 216.4 & 0.17\% [$\pm$ 7.7\%] & 61\% [$\pm$ 1\%] \\
+ \hline
+ 3 & 30 & 1 & 64.8 & 297.6 & 35 & 297.6 & -7\% [$\pm$ 3.4\%] & 46\% [$\pm$ 0.3\%] \\
+ \hline
+ 5 & 30 & 1 & 63.2 & 207.60 & 35 & 228.4 & -8.1\% [$\pm$ 7.5\%]& 16\% [$\pm$ 1.9\%] \\
+ \hline
+ 3 & 30 & 3 & 117 & 338.4 & 37 & 368.4 & -8.1\% [$\pm$ 2.9\% ] & 68\% [$\pm$ 0.23\%] \\
+ \hline
+ 5 & 30 & 3 & 107.4 & 279 & 37 & 291 & -4\% [$\pm$ 2.6\%] & 66\% [$\pm$ 0.4\%]  \\
+ \hline
+\end{tabular} 
+\caption{Caption}
+\label{tab:my_label}
+\end{sidewaystable}
+
+
+
+\section{Configurations}
+
+\begin{description}
+\item[$C_{1}$]: 3 boats, 20 tasks, ferry event 1
+\item[$C_{2}$]: 5 boats, 20 tasks, ferry event 1
+\item[$C_{3}$]: 3 boats, 20 tasks, ferry event 3
+\item[$C_{4}$]: 5 boats, 20 tasks, ferry event 3
+\item[$C_{5}$]: 3 boats, 30 tasks, ferry event 1
+\item[$C_{6}$]: 5 boats, 30 tasks, ferry event 1
+\item[$C_{7}$]: 3 boats, 30 tasks, ferry event 3
+\item[$C_{8}$]: 5 boats, 30 tasks, ferry event 3
+\end{description}
+
+
+\end{document}
