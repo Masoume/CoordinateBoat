@@ -50,6 +50,9 @@ import crw.event.output.service.ProxyCompareDistanceRequest;
 import crw.event.output.service.TasksAssignmentRequest;
 import crw.general.FastSimpleBoatSimulator;
 import crw.proxy.BoatProxy;
+import crw.proxy.BoatState;
+import crw.proxy.BoatWorld;
+import crw.proxy.CentralState;
 import crw.ui.BoatMarker;
 import crw.ui.ImagePanel;
 import edu.cmu.ri.crw.CrwNetworkUtils;
@@ -301,8 +304,10 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                     listener.eventGenerated(responseEvent);
                 }
             }
-//        }else if (oe instanceof QueueManagement){
-//            System.out.println("QueueManagement");//SJF
+            
+//        }else if (oe instanceof MultipleQueueLearning){
+//            
+//            System.out.println("CentralQueueLearning");
 //            int numProxies = 0;
 //            final ArrayList<BoatProxy> tokenProxies = new ArrayList<BoatProxy>();
 //            for (Token token : tokens) {
@@ -313,39 +318,56 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
 //            }
 //            final int numofProxies = numProxies;
 //            if (numProxies == 0) {
-//                LOGGER.log(Level.WARNING, "QueueManagement has no relevant proxies attached: " + oe);
+//                LOGGER.log(Level.WARNING, "CentralQueueLearning has no relevant proxies attached: " + oe);
 //            }
+//            
 //            (new Thread() {
+//                
 //                @Override
-//                public void run() {
-//                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                public void run(){
 //                    // Queue parameters
-//                    int maxIter = 30;//(int) (Math.random() * (40 - 30)) + 30;
-//                    double lambda = 0.00025;//arrival rate
-//                    boolean balk = false;
-//                    double mu = 0.00027;//service rate
-//                    boolean bDiscipline = false;//true:FIFO; false:SJF
-//                    double waitingCost;//cost of waiting in the system (both queue and server)
-//                    double alpha = 1/(2*mu);
-//                    double betta = 0.24;//total number of tasks for each boat
-//                    double serviceReward;//reward of completing a service
-//                    double balkThreshold = 4; //= Math.ceil(serviceReward/(mu*waitingCost));  //2;   
+//                    int maxIter = 20;//(int) (Math.random() * (38 - 25)) + 25;
+//                    System.out.println("MaxIter "+maxIter);
+//                    boolean balk = true;//balk property is available if set to true
+//                    double lambda = Math.random() * (0.00030 - 0.00020) + 0.00020;//0.00025;//arrival rate
+//                    double mu = Math.random() * (0.00032 - 0.00022) + 0.00022;//0.00027;//service rate
+//                    double avgWaitingTime = 0.00027;
+//                   
+//                    int stateType = 2;//0:localOnly; 1:localGlobal; 2:fullState
+//                    final int setupTime = (int) (Math.random() * (35 - 25)) + 25;//30;
+//                    
+//                    //learning curve setup
+//                    double totalTeamAccRew = 0.0;
+//                    double totalTeamRew = 0.0;
+//                    
+//                    // Service and Request classes
 //                    class Service{
-//                        public int serviceType; //{0:recharge, 1:connecLost, 2:dangeArea }
-//                        public int severity;//{1 for med, 2 for high}
-//                        public String serviceName;
-//                        private Service(int iType){
-//                            serviceType = iType;
-//                            if (iType == 0){
-//                                severity = 7;
-//                                serviceName = "RECHARGE";
-//                            }else if (iType == 1){
-//                                severity = 10;
-//                                serviceName = "CONNECTIONLOST";
-//                            }    
-//                            else {
-//                                severity = 5; 
-//                                serviceName = "DangerousArea";
+//                        int serviceType; //{1:recharge, 2:DangeArea, 3:connecLost }
+//                        double[] probF = {0.9,0.4,0.2};
+//                        public Service(int iType){
+//                            this.serviceType = iType;
+//                        }
+//                        public int getServType(){
+//                            return this.serviceType;
+//                        }
+//                        public double getProbF(){
+//                            return probF[serviceType-1];
+//                        }
+//                        public double getServReward(){
+//                            return getProbF();
+//                        }
+//                        public void PrintServiceDetail(){
+//                            int type = this.serviceType;
+//                            switch(type){
+//                                case 1:
+//                                    System.out.println("Service Type: RECHARGE with prob(f):"+this.probF[type-1]);
+//                                    break;
+//                                case 2:
+//                                    System.out.println("Service Type: DANGEAREA with prob(f):"+this.probF[type-1]);
+//                                    break;
+//                                default:
+//                                    System.out.println("Service Type: ConnLost with prob(f):"+this.probF[type-1]);
+//                                    break;      
 //                            }
 //                        }
 //                    } 
@@ -364,84 +386,70 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
 //                            //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
 //                        }
 //                    }
-//                    class ReqComparator implements Comparator<Request>{
-//
-//                        public int compare(Request r1, Request r2) {
-//                            if (r1.dServiceTime > r2.dServiceTime) return 1;
-//                            if (r1.dServiceTime < r2.dServiceTime) return -1;
-//                            return 0;
-//                        }
-//                    }
+//                    
 //                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //                    // Queue setup
-//                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //                    double nextArrival;// = StdRandom.exp(lambda); // time of next arrival
 //                    double nextDeparture = Double.POSITIVE_INFINITY; // time of next departure   
-//                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//                    ReqComparator priorityComp = new ReqComparator();
-//                    PriorityQueue<Request> sjfQueue = new PriorityQueue<Request>(11,priorityComp);
-//                    Queue<Request> FIFOQ = new LinkedList<Request>();//for under servising req
-//                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//                    // Statistics
-//                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//                    String strName = "";
-//                    if (balk){ strName = "/Users/Masoume/Desktop/IJCAI2017/Experiment/resultsIJCAIBalk.txt";}
-//                    else if (bDiscipline) {strName = "/Users/Masoume/Desktop/IJCAI2017/Experiment/resultsIJCAI.txt";}
-//                    else if (!bDiscipline){strName = "/Users/Masoume/Desktop/ICAR2017/Experiment/resultsIJCAI-SJF.txt";}
-//                    String inData = "maxIteration: "+maxIter+", lambda: "+lambda+", mu:"+mu;
-//                    resultsFile(strName,inData);
-//                    class BoatStatistic{
-//                        
-//                        public int[][] iCounter = new int[3][2];//for each servType{0,1,2} #occurence & #balk 
-//                        private BoatStatistic(){
-//                            for (int i=0;i<3;i++)
-//                                for (int j=0;j<2;j++)
-//                                    iCounter[i][j]=0;
-//                        }
-//                    }
-//                    BoatStatistic[] boatStat = new BoatStatistic[numofProxies];//should be equal to no boats
-//                    int totalWaitingTime = 0;//sum of the waiting times for all customers
-//                    int numCustomersServed = 0;
-//                    int numCustomersBalked = 0;
-//                    int totalThresholdValue = 0;
+//                    Queue<Request> queueOfReq = new LinkedList<>();
+//
 //                    int iter = 0;
-//                    int iRand = 0;
+//                    int iRand = 0;//random boat number 
+//                    int remains = 0;//num of remaining tasks for learner boat
+//                    int totalNumTasks = 0;
+//                    boolean endSim = false;//for learning section
 //                    double serviceTime;// = Double.POSITIVE_INFINITY;
 //                    boolean bFF = false;
-//                    double tempNDep = Double.POSITIVE_INFINITY;
-//                    final int setupTime = (int) (Math.random() * (25 - 35)) + 35;//27;
-//                    StopWatch timer = new StopWatch();
-//                    Request head = null;
-//                    timer.start();
+//                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                    //Central State
+//                    CentralState centralSt = null;
+//                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //                    
-//                    while (timer.getElapsedTimeSecs()<setupTime);//setup times
-//
+//                    StopWatch timer = new StopWatch();
+//                    timer.start();
+//                    while (timer.getElapsedTimeSecs()<setupTime);//setup time
+//                    
 //                    nextArrival = timer.getElapsedTimeSecs() + StdRandom.exp(lambda);
-//
+//                    int numCustomersBalked = 0;
 //                    //Random selection of boats removing repetitive generations
-//                    ArrayList<Integer> boatList = new ArrayList<Integer>();
+//                    ArrayList<Integer> boatList = new ArrayList<>();
+//                    int[] reqType = {0,0,0,0,0}; 
+//                    int[] nTasks = new int[numofProxies];
 //                    for (int i=0; i<numofProxies; i++) {
 //                        boatList.add(new Integer(i));
-//                        boatStat[i] = new BoatStatistic();
+//                        tokenProxies.get(i).reqTypeInt = 0;
+//                        nTasks[i] = tokenProxies.get(i).getCurrentWaypoints().size();
+//                        if (nTasks[i]>=5) nTasks[i] = 2;
+//                        else if (nTasks[i]>=3 && nTasks[i]<=4) nTasks[i]=1;
+//                        else nTasks[i]=0;
 //                    }
-//
-//                    while (iter<maxIter || !sjfQueue.isEmpty() || !FIFOQ.isEmpty()){
+//                    if (stateType==2){
+//                        centralSt = new CentralState(numofProxies,avgWaitingTime);
+//                        centralSt.updateVal(reqType, nTasks, 0);
+//                    }
+//                    centralSt.printCurrentState();
+//                    
+//                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                    //main body of simulation
+//                    while (iter<maxIter || !queueOfReq.isEmpty()){
+//                        
 //                        // it's an arrival
 //                        if ((nextArrival <= nextDeparture)&&(iter<maxIter)) {
+//                            
+//                            //Random selection of boats
 //                            if (!boatList.isEmpty()){
 //                                Collections.shuffle(boatList);
-//                                iRand = boatList.remove(0);
-//                                System.out.println("Arrived >> request from boat " +iRand+" at time: "+nextArrival);
+//                                iRand = boatList.remove(0);   
 //                                bFF = false;
 //                            }
 //                            else{
 //                                for (int i=0; i<numofProxies; i++) {//there might be consideration when a boat finishes its tasks
 //                                    boatList.add(new Integer(i));                                  
 //                                }
-//                                if (!sjfQueue.isEmpty()){
-//                                    for (Request e : sjfQueue) {
+//                                // remove boats which are already in the queue
+//                                if (!queueOfReq.isEmpty()){
+//                                    for (Request e : queueOfReq) {
 //                                        int x;
-//                                        System.out.println("e.iBoatId: "+e.iBoatId);
 //                                        for (int j=0;j<boatList.size();j++){ 
 //                                            if (e.iBoatId==boatList.get(j)){
 //                                                x = boatList.remove(j);
@@ -450,74 +458,166 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
 //                                        }
 //                                    }
 //                                }
-//                                if (!FIFOQ.isEmpty()){
-//                                    Request e = FIFOQ.peek();
-//                                    for (int j=0;j<boatList.size();j++){ 
-//                                        if (e.iBoatId==boatList.get(j)){
-//                                            boatList.remove(j);
-//                                            break;
-//                                        }
-//                                    }
-//                                }   
+//                                //Random selection of boats
 //                                if (!boatList.isEmpty())
 //                                {
-//                                    for (int k=0;k<boatList.size();k++)
-//                                        System.out.println(boatList.get(k));
 //                                    Collections.shuffle(boatList);
 //                                    iRand = boatList.remove(0);
-//                                    System.out.println("Arrived>> request from boat " +iRand+" at time: "+nextArrival);
+//                                   // System.out.println("Request from boat " +iRand+" arrived at time: "+nextArrival);
 //                                    bFF=false;
 //                                }
 //                                else {bFF = true;}
 //                            }
+//                            
 //                            if (bFF==false){
+//                                //Generate random service time
 //                                serviceTime = StdRandom.exp(mu);
-//                                //generate a random serviceType {0,1,2}
-//                                Service TypeofRequest = new Service((new Random()).nextInt(3));
-//                                if (sjfQueue.isEmpty()&& FIFOQ.isEmpty()) nextDeparture = nextArrival + serviceTime;
-//                                else if ((sjfQueue.size()==1)&&(FIFOQ.isEmpty())) FIFOQ.add(sjfQueue.poll());                                
-//                                //computing the threshold value for the new arrival
-//                                if (balk){
-//                                    serviceReward = alpha*TypeofRequest.severity;
-//                                    waitingCost = betta*(tokenProxies.get(iRand).getCurrentWaypoints().size());
-//                                    if (waitingCost==0) waitingCost = 1;
-//                                    System.out.println("Reward = "+serviceReward+ " and cost = "+ waitingCost);
-//                                    balkThreshold = Math.ceil((serviceReward*mu)/waitingCost);
-//                                    totalThresholdValue+=balkThreshold;
-//                                    System.out.println("balkThreshold = "+balkThreshold);
-//                                }
-//                                boatStat[iRand].iCounter[TypeofRequest.serviceType][0]+=1;//boat #iRand made a req of type reqType
-//                                if ((!balk) || (sjfQueue.size()< balkThreshold) || (sjfQueue.isEmpty())){ 
+//                                if (queueOfReq.isEmpty()) nextDeparture = nextArrival + serviceTime;
+//                                //generate a random serviceType {1,2,3}
+//                                Service TypeofRequest = new Service((new Random()).nextInt(3)+1);
+//                                
+//                                //update boat(iRand) value
+//                                nTasks[iRand] = tokenProxies.get(iRand).getCurrentWaypoints().size();
+//                                
+//                                if (nTasks[iRand]>=5) nTasks[iRand] = 2;
+//                                else if (nTasks[iRand]>=3 && nTasks[iRand]<=4) nTasks[iRand]=1;
+//                                else nTasks[iRand]=0;
+//                                
+//                                reqType[iRand] = TypeofRequest.getServType();
+//                                tokenProxies.get(iRand).reqTypeInt = reqType[iRand];
+//                                centralSt.updateVal(reqType, nTasks, queueOfReq.size());
+//                                
+//                                centralSt.printCurrentState();
+//                                
+//                                //decide to accept or reject
+//                                int action =-1;
+//                                if (balk){//always true; in general it means if arrival allowed to balk or not currDecisionMaker.getIntStat().getStateArr()
+//                                    action = centralSt.getCentralWorld().selectAction(centralSt.getStateArr(),iRand);
+//                                }  
+//                                
+//                                if (action==0){ //join
 //                                    
-//                                    //update departure time
-//                                    if (sjfQueue.isEmpty()){
-//                                        if (FIFOQ.isEmpty())
-//                                            FIFOQ.add(new Request(iRand,nextArrival,nextDeparture,serviceTime,TypeofRequest.serviceType));
-//                                        else
-//                                            sjfQueue.add(new Request(iRand,nextArrival,nextDeparture,serviceTime,TypeofRequest.serviceType));
+//                                    System.out.println("action "+action);
+//                                    System.out.println("QSize before update: "+queueOfReq.size());
+//                                    System.out.println("Qsize in LocalState"+centralSt.getqsize());
+//                                   
+//                                    //update state 
+//                                    int[] nextState = centralSt.getCentralWorld().getNextState(action,centralSt.getStateArr(),iRand); 
+//                                    for (int i=0;i<numofProxies;i++)
+//                                        tokenProxies.get(iRand).reqTypeInt = nextState[i*2];
+//                                        
+//                                    //update Q-Values
+//                                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~``
+//                                    double reward = centralSt.getCentralWorld().getNextReward(action,centralSt.getStateArr(),iRand,nextState,serviceTime,queueOfReq.size());
+//                                    
+//                                    double this_Q = centralSt.getCentralWorld().getPolicy().getQValue(centralSt.getStateArr(), action );
+//                                    double max_Q = centralSt.getCentralWorld().getPolicy().getMaxQValue( nextState );
+//
+//                                    double new_Q = this_Q + centralSt.getCentralWorld().getAlpha() * ( reward + centralSt.getCentralWorld().getGamma() * max_Q - this_Q );
+//                                   
+//                                    centralSt.updateTotalRew(new_Q , reward);
+//                                    centralSt.getCentralWorld().getPolicy().setQValue( centralSt.getStateArr(), action, new_Q );
+//                                    
+//                                    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~``        
+//                                    //add to the queue
+//                                    queueOfReq.add(new Request(iRand,nextArrival,nextDeparture,serviceTime,TypeofRequest.getServType()));
+//                                    //^^^^^^^^ 
+//                                    //update current state to the new state
+//                                   // currDecisionMaker.getIntStat().updateVal(4, nextState[1], queueOfReq.size()); //waiting 
+//                                    if (stateType==2){
+//                                        for (int i=0;i<numofProxies; i++) {
+//                                            reqType[i]= nextState[i*2];//tokenProxies.get(i).getCurrentWaypoints().size();
+//                                            nTasks[i]= nextState[i*2 + 1];//tokenProxies.get(i).getIntStat().getReqTypeInt();//waiting
+//                                        }
+//                                        System.out.println("iRand: "+iRand);
+//                                        reqType[iRand] = 4;
+//                                        tokenProxies.get(iRand).reqTypeInt = reqType[iRand];
+//                                        centralSt.updateVal(reqType,nTasks,queueOfReq.size());
 //                                    }
-//                                    else
-//                                        sjfQueue.add(new Request(iRand,nextArrival,nextDeparture,serviceTime,TypeofRequest.serviceType));
+//                                    System.out.println("QSize after update: "+queueOfReq.size());
+//                                    centralSt.printCurrentState();
+//                                    //currDecisionMaker should stop
+//                                    //PlanManager p = Engine.getInstance().getPlans().get(0);
+//                                    tokenProxies.get(iRand).handleEvent(new ProxyEmergencyAbort(oe.getId(), oe.getMissionId()));
 //                                    
-//                                    tokenProxies.get(iRand).handleEvent(new ProxyEmergencyAbort(oe.getId(), oe.getMissionId()));                              
-//                                }
-//                                else{
+//                                }  
+//                                else if (action == 1){ //balk
+//                                    
+//                                    System.out.println("action "+action);
 //                                    numCustomersBalked++;
 //                                    boatList.add(iRand);
-//                                    //boat #iRand balked a req of type serviceType
-//                                    boatStat[iRand].iCounter[TypeofRequest.serviceType][1]+=1;
-//                                } 
-//                                iter++;
-//                            }
-//                            nextArrival +=StdRandom.exp(lambda);
-//                        }
-//                        // it's a departure
-//                        else{
-//                            Request req = null;
-//                            req = FIFOQ.peek();
-//                            System.out.println("Left<< boat "+req.iBoatId+" arrivalTime "+req.dArrivalTime+ " DepartureTime "+req.dDepartureTime+" ServiceTime " +req.dServiceTime+" ServiceType "+req.iServiceType);
-//                            FIFOQ.poll();
+//                                                                  
+//                                    int[] currState = centralSt.getStateArr();                                  
+//                                    double reward,this_Q,max_Q,new_Q;
+//                                    
+//                                    //update state
+//                                    int[] nextState;// = currDecisionMaker.getBoatWorld().getNextState(action, currState);
+// 
+//                                    nextState = centralSt.getCentralWorld().getNextState(action,currState,iRand); 
+//                                    for (int i=0;i<numofProxies;i++)
+//                                        tokenProxies.get(iRand).reqTypeInt = nextState[i*2];
+//                                                                  
+//                                    reward = centralSt.getCentralWorld().getNextReward(action,currState,iRand,nextState,serviceTime,queueOfReq.size());
+//                                    
+//                                    this_Q = centralSt.getCentralWorld().getPolicy().getQValue(currState, action );
+//                                    max_Q = centralSt.getCentralWorld().getPolicy().getMaxQValue( nextState );
 //
+//                                    new_Q = this_Q + centralSt.getCentralWorld().getAlpha() * ( reward + centralSt.getCentralWorld().getGamma() * max_Q - this_Q );
+//                                    
+//                                    centralSt.updateTotalRew(new_Q,reward);
+//                                    
+//                                    centralSt.getCentralWorld().getPolicy().setQValue(currState, action, new_Q);
+//                                    
+//                                    //update State
+//                                    if (stateType==2){
+//                                        for (int i=0;i<numofProxies;i++){
+//                                            reqType[i] = nextState[i*2];
+//                                            nTasks[i] = nextState[i*2+1];
+//                                        }   
+//                                        reqType[iRand] = 0; //normal
+//                                        tokenProxies.get(iRand).reqTypeInt = reqType[iRand];
+//                                        centralSt.updateVal(reqType, nTasks, queueOfReq.size());                                   
+//                                    }
+//                                    centralSt.printCurrentState();
+//                                } //end balk
+//                                
+//                                iter++; 
+//                        }
+//                            
+//                        nextArrival +=StdRandom.exp(lambda);   
+//                        
+//                    }//end of arrival
+//                    else{ //if departure
+//                                
+//                        System.out.println("Departure: Current Q size: "+queueOfReq.size());
+//                        centralSt.printCurrentState();
+//                        
+//                        if (!queueOfReq.isEmpty()){
+//                            Request req;
+//                            req = new Request(queueOfReq.peek().iBoatId,queueOfReq.peek().dArrivalTime,queueOfReq.peek().dDepartureTime,queueOfReq.peek().dServiceTime,queueOfReq.peek().iServiceType);
+//                            queueOfReq.remove();
+//
+//                            //update state
+//                            reqType[req.iBoatId] = 0;
+//                            tokenProxies.get(req.iBoatId).reqTypeInt = 0;
+//                            
+//                            centralSt.updateVal(reqType, nTasks, queueOfReq.size());
+//                            
+////                            if (stateType==2){
+////                                for (int i=0;i<numofProxies;i++){
+////                                    nTasks[i] =  tokenProxies.get(i).getCurrentWaypoints().size();
+////                                    if (nTasks[i]>=5) nTasks[i] = 2;
+////                                    else if (nTasks[i]>=3 && nTasks[i]<=4) nTasks[i]=1;
+////                                    else nTasks[i]=0;
+////                                    
+////                                    reqType[i] = tokenProxies.get(iRand).reqTypeInt;// tokenProxies.get(i).getIntStat().getReqTypeInt();
+////                                }
+////                                reqType[req.iBoatId] = 0;//normal
+////                                centralSt.updateVal(reqType, nTasks, queueOfReq.size());
+////                            }
+//                            centralSt.printCurrentState();    
+//                            System.out.println("Departure: Q size after: "+queueOfReq.size());
+//                            //^^^^^^^^^^
 //                            //the boat should resume the path
 //                            BoatProxy inQB = tokenProxies.get(req.iBoatId);
 //                            ArrayList<Position> currTasksPositions = new ArrayList<Position>();
@@ -534,98 +634,59 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
 //                            Hashtable<ProxyInt, Path> proxyPathTemp = new Hashtable<ProxyInt, Path>();
 //
 //                            ArrayList<Location> tasksLocations = Conversion.positionToLocation(currTasksPositions);
-//                            System.out.println("current tasks list: " + currTasksPositions);
 //
 //                            proxyPathTemp.put(inQB, new PathUtm(tasksLocations));
 //
 //                            ProxyExecutePath oEv1 = new ProxyExecutePath(oe.getId(), oe.getMissionId(), proxyPathTemp);
 //
-//                            System.out.println("boat "+req.iBoatId + " resumed");
-//
 //                            inQB.handleEvent(oEv1);
 //
 //                            //***********************************
 //                            double wait = nextDeparture - req.dArrivalTime;
-//                            totalWaitingTime += wait;
-//                            numCustomersServed++;
+////                            totalWaitingTime += wait;
+////                            numCustomersServed++;
 //
-//                            if (sjfQueue.isEmpty()) nextDeparture = Double.POSITIVE_INFINITY;
-//                            //else nextDeparture += StdRandom.exp(mu); //nextDeparture += StdRandom.gaussian(mu,100);
-//                            else {
-//                                nextDeparture += sjfQueue.peek().dServiceTime;
-//                                sjfQueue.peek().dDepartureTime = nextDeparture;
-//                                FIFOQ.add(sjfQueue.poll());
-//                            } 
+//                            if (queueOfReq.isEmpty()) nextDeparture = Double.POSITIVE_INFINITY;
+//                            else nextDeparture += StdRandom.exp(mu); //nextDeparture += StdRandom.gaussian(mu,100);
 //                        }
-//                       
-//                        try {
-//                            Thread.sleep(1000);
-//                        } catch (InterruptedException ex) {
-//                            Logger.getLogger(BoatProxy.class.getName()).log(Level.SEVERE, null, ex);
-//                        }
-//                    }
-//                    //print queue statistics
-//                    int totalNumReq = numCustomersServed+numCustomersBalked;
+//                        else {nextDeparture = Double.POSITIVE_INFINITY;}
+//                    }//end if departure
 //                    
-//                    resultsFile(strName,"Total No. of requests arrived: "+ totalNumReq);
-//                    resultsFile(strName,"No. of requests served: "+ numCustomersServed);
-//                    resultsFile(strName,"No. of requests balked: "+ numCustomersBalked);
-//                    resultsFile(strName,"Avg threshold value: "+ totalThresholdValue/totalNumReq);
-//                    resultsFile(strName,"Total waiting time: "+totalWaitingTime + " min");
-//                    resultsFile(strName,"Avg waiting time: "+totalWaitingTime/numCustomersServed + " min");
-//                    
-//                    //some extra statistics
-//                    for (int i=0;i<numofProxies;i++){
-//                        for (int j=0;j<3;j++){//diff serv type
-//                            String reqName;
-//                            if (j==0)
-//                                reqName = "Recharge";
-//                            else if (j==1)
-//                                reqName = "ConnLost";
-//                            else
-//                                reqName = "DangeArea";  
-//                            resultsFile(strName,"Boat "+i+" ReqType "+ reqName+" #TotalReq: "+ boatStat[i].iCounter[j][0]+ " #balk: "+boatStat[i].iCounter[j][1]);
-//                          //  System.out.println("Boat "+i+" ReqType "+ reqName+" #TotalReq: "+ boatStat[i].iCounter[j][0]+ " #balk: "+boatStat[i].iCounter[j][1]);
-//                        }
+//                    try {
+//                        Thread.sleep(1000);
+//                    } catch (InterruptedException ex) {
+//                        Logger.getLogger(ProxyEventHandler.class.getName()).log(Level.SEVERE, null, ex);
 //                    }
-//
-//                    //BoatProxy inQB = tokenProxies.get(req.iBoatId);
-//                    //ArrayList<Position> currTasksPositions = new ArrayList<Position>();
-//                    Set<BoatMarker> boatSet = decisions.keySet();
-//                    int countSet = 0;
-//                    int setSize = boatSet.size();
-//                    System.out.println("setSize "+setSize);
-//                    BoatMarker bMarker;
-//                    while (countSet<setSize){
-//                        countSet = 0;
-//                        for (Iterator<BoatMarker> it = boatSet.iterator(); it.hasNext();) {
-//                            bMarker = it.next();
-//                            if (bMarker.getProxy().getCurrentWaypoints().isEmpty()) {
-//                                countSet++;
-//                            } 
-//                        }
-//                    }
-//                    System.out.println("countSet "+countSet);
-//                    resultsFile(strName,"Total Trip time: "+timer.getElapsedTimeSecs() + " min");
-//                    resultsFile(strName,"====================================");
-//                    PlanManager p = Engine.getInstance().getPlans().get(0);
-//                    p.abortMission();
-//                    //Engine.getInstance().abort(p);
-//                    System.exit(0);
-//                    //the whole plan should be aborted
-//                    // means all boats completed their tasks
+//                    //10 Sep: this part is removed in the new version, in which the episode ends only when #iter = maxIter
+//                    if (endSim){
+//                        break;
+//                    }                
 //                }
+//    
+//                //simulation ends
+//                System.out.println("TotalCustomersBalked: "+numCustomersBalked);
+//                System.out.println("------------");
+//                centralSt.showTotalRew();
+//                System.out.println("------------");
+//                centralSt.saveTotalAccRew();
+//                centralSt.saveTotalRew();
+//                centralSt.getCentralWorld().getPolicy().saveQValues();
+//                //the whole plan should be aborted           
+//                PlanManager p = Engine.getInstance().getPlans().get(0);
+//                p.abortMission();
+//                //Engine.getInstance().abort(p);
+//                System.exit(0); 
+//                }     
 //            }).start();
-//            
-//            //System.out.println("after start thread.state"+Thread.currentThread().getState());
-//            
-//            QueueManagementDone responseEvent = new QueueManagementDone(oe.getId(), oe.getMissionId(),tokenProxies);
+//                
+//            QueueLearningDone responseEvent = new QueueLearningDone(oe.getId(), oe.getMissionId(),tokenProxies);
 //
 //            for (GeneratedEventListenerInt listener : listeners) {
 //                LOGGER.log(Level.FINE, "\tSending response to listener: {0}", listener);
 //                listener.eventGenerated(responseEvent);
 //            }
-//      
+//                
+//            
         }else if (oe instanceof MultipleQueueLearning){
             
             System.out.println("MultipleQueueLearning");
@@ -648,22 +709,17 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                 public void run(){
                     
                     // Queue parameters
-                    int maxIter = (int) (Math.random() * (38 - 25)) + 25;
+                    int maxIter = 20;//(int) (Math.random() * (38 - 25)) + 25;
                     System.out.println("MaxIter "+maxIter);
                     boolean balk = true;//balk property is available if set to true
-                    double lambda = Math.random() * (0.00034 - 0.00024) + 0.00024;//0.00025;//arrival rate
-                    double mu = Math.random() * (0.00036 - 0.00026) + 0.00026;//0.00027;//service rate
-                    boolean bDiscipline = true;//true:FIFO; false:SJF
-                    double waitingCost;//cost of waiting in the system (both queue and server)
-                    double alpha = 20/mu;//1/(2*mu);
-                    double betta = 18;//0.24;
-                    double serviceReward;//reward of completing a service
-                    double balkThreshold = 0; //= Math.ceil(serviceReward/(mu*waitingCost));  //2;   
-                    final int numType = 3;//number of request type
-                    final int setupTime = (int) (Math.random() * (35 - 25)) + 25;//27;
+                    double lambda = Math.random() * (0.00030 - 0.00020) + 0.00020;//0.00025;//arrival rate
+                    double mu = Math.random() * (0.00032 - 0.00022) + 0.00022;//0.00027;//service rate
+                    double avgWaitingTime = 0.00027;
+                   // boolean bLocal = false; //false: GL; true: L
+                    int stateType = 0;//0:localOnly; 1:localGlobal; 2:fullState
+                    final int setupTime = (int) (Math.random() * (35 - 25)) + 25;//30;
                     //learning curve setup
-                    double totalRew = 0.0;
-                    double totalAccRew = 0.0;
+
                     double totalTeamAccRew = 0.0;
                     double totalTeamRew = 0.0;
                     
@@ -718,7 +774,7 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                     // Queue setup
                     double nextArrival;// = StdRandom.exp(lambda); // time of next arrival
                     double nextDeparture = Double.POSITIVE_INFINITY; // time of next departure   
-                    Queue<Request> queueOfReq = new LinkedList<Request>();
+                    Queue<Request> queueOfReq = new LinkedList<>();
 
                     int iter = 0;
                     int iRand = 0;//random boat number 
@@ -727,7 +783,7 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                     boolean endSim = false;//for learning section
                     double serviceTime;// = Double.POSITIVE_INFINITY;
                     boolean bFF = false;
-                    double tempNDep = Double.POSITIVE_INFINITY; // temporary next departure value
+             
                     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                     
                     StopWatch timer = new StopWatch();
@@ -738,13 +794,23 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                    // nextArrival = timer.getElapsedTimeSecs() + StdRandom.gaussian(lambda, 100);
                     int numCustomersBalked = 0;
                     //Random selection of boats removing repetitive generations
-                    ArrayList<Integer> boatList = new ArrayList<Integer>();
+                    ArrayList<Integer> boatList = new ArrayList<>();
+                    int[] reqType = {0,0,0,0,0}; 
+                    int[] nTasks = new int[5];
                     for (int i=0; i<numofProxies; i++) {
                         boatList.add(new Integer(i));
                         // initializing multi-agent learning params
-                        tokenProxies.get(i).initQLearning();   
+                        tokenProxies.get(i).initQLearning(stateType,avgWaitingTime,lambda); //0:localOnly; 1:localGlobal; 2:fullState //false: GL; true: L 
                         totalNumTasks = tokenProxies.get(i).getCurrentWaypoints().size();
+                        nTasks[i] = totalNumTasks;                   
                         tokenProxies.get(i).getIntStat().updateVal(0, totalNumTasks, 0);
+                     //  tokenProxies.get(i).getIntStat().setPrevAction(0);//Move-on
+                    }
+                    if (stateType==2){
+                        for (int i=0;i<numofProxies; i++) {
+                            tokenProxies.get(i).getIntStat().updateVal(reqType,nTasks,0);//for each boat, keep the reqType and #tasks of all other boats
+                          //  tokenProxies.get(i).getIntStat().setPrevAction(0);//Move-on
+                        }
                     }
                     
                     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -752,7 +818,7 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                     while (iter<maxIter || !queueOfReq.isEmpty()){
                         
                         // it's an arrival
-                        balkThreshold = 0;
+                       // balkThreshold = 0;
                         if ((nextArrival <= nextDeparture)&&(iter<maxIter)) {
                             
                             //Random selection of boats
@@ -798,114 +864,173 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                                 
                                 //update boat(iRand) value
                                 BoatProxy currDecisionMaker = tokenProxies.get(iRand);
+                                for (int i=0;i<numofProxies; i++) {
+                                    nTasks[i]= tokenProxies.get(i).getCurrentWaypoints().size();
+                                    reqType[i]= tokenProxies.get(i).getIntStat().getReqTypeInt();
+                                }
                                 remains = currDecisionMaker.getCurrentWaypoints().size();
                                 currDecisionMaker.getIntStat().updateVal(TypeofRequest.getServType(), remains, queueOfReq.size());
+                                reqType[iRand] = TypeofRequest.getServType();
+                                
+                                if (stateType==2)//full state
+                                    currDecisionMaker.getIntStat().updateVal(reqType, nTasks, queueOfReq.size());
+                                
                                 System.out.println("Current Decision Maker: Boat"+iRand);
                                 //decide to balk or join
                                 int action =-1;
                                 if (balk){//always true; in general it means if arrival allowed to balk or not
-                                    action = currDecisionMaker.getBoatWorld().selectAction(currDecisionMaker.getIntStat().getStateArr());
+                                    action = currDecisionMaker.getBoatWorld().selectAction(currDecisionMaker.getIntStat().getStateArr(),iRand);
                                 }  
+                                // keep the seleceted action; later on as a prev. action
+                               // currDecisionMaker.getIntStat().setPrevAction(action);
                                 
                                 if (action==0){ //join
                                     
                                     System.out.println("action "+action);
-                                    
+                                    System.out.println("QSize before update: "+queueOfReq.size());
+                                    System.out.println("Qsize in LocalState"+currDecisionMaker.getIntStat().getqsize());
                                     //update state 
-                                    int[] nextState = currDecisionMaker.getBoatWorld().getNextState(action, currDecisionMaker.getIntStat().getStateArr());
-
-                                    double reward = currDecisionMaker.getBoatWorld().getNextReward(action,currDecisionMaker.getIntStat().getStateArr());
+                                    int[] nextState;
+                                    
+                                    if (stateType!=2) 
+                                        nextState = currDecisionMaker.getBoatWorld().getNextState(action, currDecisionMaker.getIntStat().getStateArr());            
+                                    else //full state presentation
+                                        nextState = currDecisionMaker.getBoatWorld().getNextState(action,currDecisionMaker.getIntStat().getStateArr(),iRand); 
+                                    
+                                    //!!!this section should update the q-values of all boats not only the currDecisionMaker; new version 6 Oct.
+                                    //in other words the reward should go to all boats
+                                    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                                    double reward;
+                                    
+                                    if (stateType==2)
+                                        reward = currDecisionMaker.getBoatWorld().getNextReward(action,currDecisionMaker.getIntStat().getStateArr(),iRand,nextState,serviceTime,queueOfReq.size());
+                                    else
+                                        reward = currDecisionMaker.getBoatWorld().getNextReward(action,currDecisionMaker.getIntStat().getStateArr(),nextState,serviceTime,queueOfReq.size());
+                                    
                                     double this_Q = currDecisionMaker.getBoatWorld().getPolicy().getQValue( currDecisionMaker.getIntStat().getStateArr(), action );
                                     double max_Q = currDecisionMaker.getBoatWorld().getPolicy().getMaxQValue( nextState );
 
                                     double new_Q = this_Q + currDecisionMaker.getBoatWorld().getAlpha() * ( reward + currDecisionMaker.getBoatWorld().getGamma() * max_Q - this_Q );
+                                   
                                     currDecisionMaker.getIntStat().updateTotalRew(new_Q,reward);
-                                    //Total Team (Accumulate) Reward should be updated
-                                   // totalTeamAccRew += currDecisionMaker.getIntStat().getTotalAccRew();
-                                   // totalTeamRew += currDecisionMaker.getIntStat().getTotalRew();
-                                    
+                                   
                                     currDecisionMaker.getBoatWorld().getPolicy().setQValue( currDecisionMaker.getIntStat().getStateArr(), action, new_Q );
 
+                                    //!! new Q-Values of all other boats
+//                                    for (int i=0;i<numofProxies; i++) {
+//                                        if (i!=iRand){
+//                                            //prev state of boat i: tokenProxies.get(i).getIntStat().getStateArr()
+//                                            int[] prevState = tokenProxies.get(i).getIntStat().getPrevStateArr();
+//                                            //prev action of boat i: 
+//                                            int prevAction = tokenProxies.get(i).getIntStat().getPrevAction();
+//                                            
+//                                            this_Q = tokenProxies.get(i).getBoatWorld().getPolicy().getQValue(prevState, prevAction);
+//                                            max_Q = tokenProxies.get(i).getBoatWorld().getPolicy().getMaxQValue( tokenProxies.get(i).getIntStat().getStateArr());
+//                                            new_Q = this_Q + tokenProxies.get(i).getBoatWorld().getAlpha() * ( reward + tokenProxies.get(i).getBoatWorld().getGamma() * max_Q - this_Q );
+//                                            
+//                                            tokenProxies.get(i).getIntStat().updateTotalRew(new_Q,reward);
+//                                            tokenProxies.get(i).getBoatWorld().getPolicy().setQValue( prevState, prevAction, new_Q );
+//                                        }
+//                                    }  
+                                  
+                                    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                                    
                                     //update current state to the new state
                                     remains = currDecisionMaker.getCurrentWaypoints().size();
-                                    currDecisionMaker.getIntStat().updateVal(4, nextState[1], nextState[2]); //waiting
+                                   // currDecisionMaker.getIntStat().updateVal(4, nextState[1], nextState[2]); //waiting
                                     
                                     //add to the queue
                                     queueOfReq.add(new Request(iRand,nextArrival,nextDeparture,serviceTime,TypeofRequest.getServType()));
                                     //^^^^^^^^ 
+                                    //update current state to the new state
+                                    currDecisionMaker.getIntStat().updateVal(4, nextState[1], queueOfReq.size()); //waiting
+                                    
+                                    if (stateType==2){
+                                        for (int i=0;i<numofProxies; i++) {
+                                            nTasks[i]= tokenProxies.get(i).getCurrentWaypoints().size();
+                                            reqType[i]= tokenProxies.get(i).getIntStat().getReqTypeInt();//waiting
+                                        }
+                                        currDecisionMaker.getIntStat().updateVal(reqType,nTasks,queueOfReq.size());
+                                    }
+                                    System.out.println("QSize after update: "+queueOfReq.size());
+                                    System.out.println("Qsize after update in LocalState: "+currDecisionMaker.getIntStat().getqsize());
+                                    
+                                    currDecisionMaker.getIntStat().printCurrentState();
                                     //currDecisionMaker should stop
                                     //PlanManager p = Engine.getInstance().getPlans().get(0);
                                     currDecisionMaker.handleEvent(new ProxyEmergencyAbort(oe.getId(), oe.getMissionId()));
                                 }
-                                else{ //balk|moveOn
+                                else if (action == 1){ //balk
                                     
+                                    System.out.println("action "+action);
                                     numCustomersBalked++;
                                     boatList.add(iRand);
-                                    Random rand = new Random(); 
-                                    int ran = rand.nextInt(10)+1; //generate random num for probF
-                                    int rType = currDecisionMaker.getIntStat().getReqTypeInt();
-                                    boolean terminate = false;
-                                    int[] currState = currDecisionMaker.getIntStat().getStateArr();
-                                    double reward,max_Q,new_Q;
+                                                                  
+                                    int[] currState = currDecisionMaker.getIntStat().getStateArr();                                  
+                                    double reward,this_Q,max_Q,new_Q;
                                     
                                     //update state
-                                    int[] nextState = currDecisionMaker.getBoatWorld().getNextState(action, currState);
-                                    double this_Q = currDecisionMaker.getBoatWorld().getPolicy().getQValue( currState, action );
+                                    int[] nextState;// = currDecisionMaker.getBoatWorld().getNextState(action, currState);
                                     
-                                    switch(rType){
-                                        case 1:
-                                            if (ran <= currDecisionMaker.getIntStat().P_Battery){//fail 0.9
-                                                terminate = true;
-                                            }
-                                            //sim should be stopped
-                                            break;
-                                        case 2:
-                                            if (ran <= currDecisionMaker.getIntStat().P_DangeArea){//fail 0.4
-                                                terminate = true;
-                                            }
-                                            //sim should be stopped
-                                            break;
-                                        case 3:
-                                            if (ran <= currDecisionMaker.getIntStat().P_Connection){//fail 0.2
-                                                terminate = true;
-                                            }
-                                            //sim should be stopped
-                                            break;
-                                        default:
-                                            System.out.println("No Failure happend");  
-                                            terminate = false;    
-                                            break;
-                                    }
-                                    //update q value
-                                    if (terminate){
-                                        reward = currDecisionMaker.getBoatWorld().getRFail();
-                                        new_Q = this_Q + currDecisionMaker.getBoatWorld().getAlpha() * ( reward - this_Q );//it's a final state
-                                        currDecisionMaker.getIntStat().updateTotalRew(new_Q,reward);
-                                        //Total Team (Accumulate) Reward should be updated
-                                      //  totalTeamAccRew += currDecisionMaker.getIntStat().getTotalAccRew();
-                                      //  totalTeamRew += currDecisionMaker.getIntStat().getTotalRew();
-                                        
-                                        currDecisionMaker.getBoatWorld().getPolicy().setQValue( currState, action, new_Q );
-                                        //update current state to the new state
-                                        currDecisionMaker.getIntStat().updateVal(5, nextState[1], nextState[2]);//fail=5
-                                        
-                                        //simulation should be stopped
-                                        endSim = true;
-                                    }
-                                    else{
-                                        reward = currDecisionMaker.getBoatWorld().getRTask();
-                                        max_Q = currDecisionMaker.getBoatWorld().getPolicy().getMaxQValue( nextState );
+                                    if (stateType!=2) 
+                                        nextState = currDecisionMaker.getBoatWorld().getNextState(action, currState);            
+                                    else 
+                                        nextState = currDecisionMaker.getBoatWorld().getNextState(action,currState,iRand); 
+                                    
+                                    if (stateType!=2)
+                                        reward = currDecisionMaker.getBoatWorld().getNextReward(action,currDecisionMaker.getIntStat().getStateArr(),nextState,serviceTime,queueOfReq.size());
+                                    else
+                                        reward = currDecisionMaker.getBoatWorld().getNextReward(action,currDecisionMaker.getIntStat().getStateArr(),iRand,nextState,serviceTime,queueOfReq.size());
+                                    
+                                    this_Q = currDecisionMaker.getBoatWorld().getPolicy().getQValue( currDecisionMaker.getIntStat().getStateArr(), action );
+                                    max_Q = currDecisionMaker.getBoatWorld().getPolicy().getMaxQValue( nextState );
 
-                                        new_Q = this_Q + currDecisionMaker.getBoatWorld().getAlpha() * ( reward + currDecisionMaker.getBoatWorld().getGamma() * max_Q - this_Q );                          
-                                  //      new_Q+= reward;
-                                        currDecisionMaker.getIntStat().updateTotalRew(new_Q,reward);
-                                        //Total Team (Accumulate) Reward should be updated
-                                    //    totalTeamAccRew += currDecisionMaker.getIntStat().getTotalAccRew();
-                                    //    totalTeamRew += currDecisionMaker.getIntStat().getTotalRew();
-                                        
-                                        currDecisionMaker.getBoatWorld().getPolicy().setQValue(currState, action, new_Q);
-                                        currDecisionMaker.getIntStat().updateVal(nextState[0], nextState[1], nextState[2]);
-                                    }   
+                                    new_Q = this_Q + currDecisionMaker.getBoatWorld().getAlpha() * ( reward + currDecisionMaker.getBoatWorld().getGamma() * max_Q - this_Q );
+                                    currDecisionMaker.getIntStat().updateTotalRew(new_Q,reward);
+                                    
+                                    currDecisionMaker.getBoatWorld().getPolicy().setQValue(currState, action, new_Q);
+                                    
+                                    //!! new Q-Values of all other boats
+//                                    for (int i=0;i<numofProxies; i++) {
+//                                        if (i!=iRand){
+//                                            //prev state of boat i: tokenProxies.get(i).getIntStat().getStateArr()
+//                                            int[] prevState = tokenProxies.get(i).getIntStat().getPrevStateArr();
+//                                            //prev action of boat i: 
+//                                            int prevAction = tokenProxies.get(i).getIntStat().getPrevAction();
+//                                            
+//                                            this_Q = tokenProxies.get(i).getBoatWorld().getPolicy().getQValue(prevState, prevAction);
+//                                            max_Q = tokenProxies.get(i).getBoatWorld().getPolicy().getMaxQValue( tokenProxies.get(i).getIntStat().getStateArr());
+//                                            new_Q = this_Q + tokenProxies.get(i).getBoatWorld().getAlpha() * ( reward + tokenProxies.get(i).getBoatWorld().getGamma() * max_Q - this_Q );
+//                                            
+//                                            tokenProxies.get(i).getIntStat().updateTotalRew(new_Q,reward);
+//                                            tokenProxies.get(i).getBoatWorld().getPolicy().setQValue( prevState, prevAction, new_Q );
+//                                        }
+//                                    }
+                                    
+                                    
+                                    //update State
+                                    //currDecisionMaker.getIntStat().updateVal(nextState[0], nextState[1], queueOfReq.size());         
+                                    //@16 Oct.
+                                    currDecisionMaker.getIntStat().updateVal(0, nextState[1], queueOfReq.size());//normal
+                                    
+                                    if (stateType==2){
+                                        for (int i=0;i<numofProxies;i++){
+                                            reqType[i] = nextState[i*2];
+                                            nTasks[i] = nextState[i*2+1];
+                                        }                                      
+                                        currDecisionMaker.getIntStat().updateVal(reqType, nTasks, queueOfReq.size());                                   
+                                    }
+                                    
+                                    currDecisionMaker.getIntStat().printCurrentState();
+                                    //new version @16 Oct.: failure does not let the sim. to end. We continue until the fixed no. of iteration
+//                                    if (stateType == 2){
+//                                        if (nextState[iRand*2]==5)//fail
+//                                         endSim = true;
+//                                    }
+//                                    else {
+//                                        if (nextState[0]==5)//fail
+//                                         endSim = true;
+//                                    }
                                 }
                                 
                                 iter++;
@@ -915,47 +1040,61 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                         }
                         else{ // it's a departure
                             
-                            Request req = null;
-                            req = new Request(queueOfReq.peek().iBoatId,queueOfReq.peek().dArrivalTime,queueOfReq.peek().dDepartureTime,queueOfReq.peek().dServiceTime,queueOfReq.peek().iServiceType);
-                     //       System.out.println("Removed: boat number "+req.iBoatId+" arrivalTime "+req.dArrivalTime+ " DepartureTime "+req.dDepartureTime+ " ServiceType "+req.iServiceType);
-                            queueOfReq.remove();
+                            System.out.println("Departure: Current Q size: "+queueOfReq.size());
+                            if (!queueOfReq.isEmpty()){
+                                Request req = null;
+                                req = new Request(queueOfReq.peek().iBoatId,queueOfReq.peek().dArrivalTime,queueOfReq.peek().dDepartureTime,queueOfReq.peek().dServiceTime,queueOfReq.peek().iServiceType);
+                         //       System.out.println("Removed: boat number "+req.iBoatId+" arrivalTime "+req.dArrivalTime+ " DepartureTime "+req.dDepartureTime+ " ServiceType "+req.iServiceType);
+                                queueOfReq.remove();
 
-                            //update state
-                            tokenProxies.get(req.iBoatId).getIntStat().updateVal(0, remains, queueOfReq.size());//normal=0
+                                //update state
+                                tokenProxies.get(req.iBoatId).getIntStat().updateVal(0, remains, queueOfReq.size());//normal=0
+                              //  tokenProxies.get(req.iBoatId).getIntStat().setPrevAction(1);//balk or move-on  while waiting
+                                
+                                if (stateType==2){
+                                    for (int i=0;i<numofProxies;i++){
+                                        nTasks[i] =  tokenProxies.get(i).getCurrentWaypoints().size();
+                                        reqType[i] = tokenProxies.get(i).getIntStat().getReqTypeInt();
+                                    }
+                                    tokenProxies.get(req.iBoatId).getIntStat().updateVal(reqType, nTasks, queueOfReq.size());//normal=0
+                                }
+                                
+                                tokenProxies.get(req.iBoatId).getIntStat().printCurrentState();
+                                
+                                System.out.println("Departure: Q size after: "+queueOfReq.size());
+                                //^^^^^^^^^^
+                                //the boat should resume the path
+                                BoatProxy inQB = tokenProxies.get(req.iBoatId);
+                                ArrayList<Position> currTasksPositions = new ArrayList<Position>();
+                                Set<BoatMarker> boatSet = decisions.keySet();
+                                BoatMarker bMarker;
+                                for (Iterator<BoatMarker> it = boatSet.iterator(); it.hasNext();) {
+                                    bMarker = it.next();
+                                    if (bMarker.getProxy() == inQB) {
+                                        currTasksPositions.addAll(decisions.get(bMarker));
+                                        break;
+                                    } 
+                                }
 
-                            
-                            //^^^^^^^^^^
-                            //the boat should resume the path
-                            BoatProxy inQB = tokenProxies.get(req.iBoatId);
-                            ArrayList<Position> currTasksPositions = new ArrayList<Position>();
-                            Set<BoatMarker> boatSet = decisions.keySet();
-                            BoatMarker bMarker;
-                            for (Iterator<BoatMarker> it = boatSet.iterator(); it.hasNext();) {
-                                bMarker = it.next();
-                                if (bMarker.getProxy() == inQB) {
-                                    currTasksPositions.addAll(decisions.get(bMarker));
-                                    break;
-                                } 
+                                Hashtable<ProxyInt, Path> proxyPathTemp = new Hashtable<ProxyInt, Path>();
+
+                                ArrayList<Location> tasksLocations = Conversion.positionToLocation(currTasksPositions);
+
+                                proxyPathTemp.put(inQB, new PathUtm(tasksLocations));
+
+                                ProxyExecutePath oEv1 = new ProxyExecutePath(oe.getId(), oe.getMissionId(), proxyPathTemp);
+
+                                inQB.handleEvent(oEv1);
+
+                                //***********************************
+                                double wait = nextDeparture - req.dArrivalTime;
+    //                            totalWaitingTime += wait;
+    //                            numCustomersServed++;
+
+                                if (queueOfReq.isEmpty()) nextDeparture = Double.POSITIVE_INFINITY;
+                                else nextDeparture += StdRandom.exp(mu); //nextDeparture += StdRandom.gaussian(mu,100);
                             }
-
-                            Hashtable<ProxyInt, Path> proxyPathTemp = new Hashtable<ProxyInt, Path>();
-
-                            ArrayList<Location> tasksLocations = Conversion.positionToLocation(currTasksPositions);
- 
-                            proxyPathTemp.put(inQB, new PathUtm(tasksLocations));
-
-                            ProxyExecutePath oEv1 = new ProxyExecutePath(oe.getId(), oe.getMissionId(), proxyPathTemp);
-
-                            inQB.handleEvent(oEv1);
-
-                            //***********************************
-                            double wait = nextDeparture - req.dArrivalTime;
-//                            totalWaitingTime += wait;
-//                            numCustomersServed++;
-
-                            if (queueOfReq.isEmpty()) nextDeparture = Double.POSITIVE_INFINITY;
-                            else nextDeparture += StdRandom.exp(mu); //nextDeparture += StdRandom.gaussian(mu,100);
-
+                            else {nextDeparture = Double.POSITIVE_INFINITY;}
                         }
                         
                         try {
@@ -963,7 +1102,7 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                         } catch (InterruptedException ex) {
                             Logger.getLogger(ProxyEventHandler.class.getName()).log(Level.SEVERE, null, ex);
                         }
-                        
+                        //10 Sep: this part is removed in the new version, in which the episode ends only when #iter = maxIter
                         if (endSim){
                             break;
                         }  
@@ -979,6 +1118,7 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                        tokenProxies.get(i).getIntStat().showTotalRew();
                        System.out.println("------------");
                        tokenProxies.get(i).getBoatWorld().getPolicy().saveQValues();
+                       tokenProxies.get(i).getIntStat().saveTotalAccRew();
                    }
                    //save team accumulated reward in a file 
                    saveTotalTeamAccRew(totalTeamAccRew);
@@ -1108,7 +1248,7 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                     StopWatch timer = new StopWatch();
                     timer.start();
                     while (timer.getElapsedTimeSecs()<setupTime);//setup times
-                    bLearner.initQLearning();
+                    bLearner.initQLearning(1,mu,lambda);//if false GL, ow. onyl local
                     nextArrival = timer.getElapsedTimeSecs() + StdRandom.exp(lambda);
                    // nextArrival = timer.getElapsedTimeSecs() + StdRandom.gaussian(lambda, 100);
                     int numCustomersBalked = 0;
@@ -1180,7 +1320,7 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                                 if (balk){//always true
                                     //new^^^^^
                                     if (iRand==learnerBoatNum){//if learner
-                                        action = bLearner.getBoatWorld().selectAction(bLearner.getIntStat().getStateArr());
+                                        action = bLearner.getBoatWorld().selectAction(bLearner.getIntStat().getStateArr(),iRand);
                                    //     System.out.println("Selected Action is "+action+" for learner at state "+ bLearner.getIntStat().getStateArr());
                                     }
                                     //^^^^^^^^ 
@@ -1205,7 +1345,7 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                                      //   action = 0;
                                         int[] nextState = bLearner.getBoatWorld().getNextState(action, bLearner.getIntStat().getStateArr());
                                         
-                                        double reward = bLearner.getBoatWorld().getNextReward(action,bLearner.getIntStat().getStateArr());
+                                        double reward = bLearner.getBoatWorld().getNextReward(action,bLearner.getIntStat().getStateArr(),nextState,serviceTime,bLearner.getIntStat().getqsize());
                                         double this_Q = bLearner.getBoatWorld().getPolicy().getQValue( bLearner.getIntStat().getStateArr(), action );
                                         double max_Q = bLearner.getBoatWorld().getPolicy().getMaxQValue( nextState );
 
@@ -1420,28 +1560,37 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
             (new Thread() {
                 @Override
                 public void run() {
+ 
                     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                     // Queue parameters
-                    int maxIter = 30;//(int) (Math.random() * (40 - 30)) + 30;
+                    int maxIter = 20;//(int) (Math.random() * (40 - 30)) + 30;
                     boolean balk = true;//balk property is available if set to true
-                    double lambda = 0.00025;//arrival rate
-                    double mu = 0.00027;//service rate
+                    double lambda = 0.00025;//StdRandom.uniform(0.00010, 0.00040);//0.00025;//arrival rate
+                    double mu = StdRandom.uniform(0.00011,0.00043);//0.00027;//service rate // rather to be in a range
                     boolean bDiscipline = true;//true:FIFO; false:SJF
+                    boolean bLocal = false; //if true only local state else locGlob
+                    int stateType = 1;//0: localOnly; 1: localGlobal; 2: fullState
                     double waitingCost;//cost of waiting in the system (both queue and server)
                     double alpha = 20/mu;//1/(2*mu);
                     double betta = 18;//0.24;//total number of tasks for each boat
                     double serviceReward = 0.0;//reward of completing a service
                     double balkThreshold = 0.0; //= Math.ceil(serviceReward/(mu*waitingCost));  //2;   
+                    double totalThresholdValue = 0.0;
                     final int numType = 3;
                     int remains = 0;//num of remaining tasks for learner boat
-                    final int setupTime = (int) (Math.random() * (25 - 35)) + 25;//27;
-                    final int SA_Learning = 2;//single-agent learning = 1; Multi-Agent = 0; dynamic thresh = 2
+                    final int setupTime = (int) (Math.random() * (30 - 25)) + 25;//27;
+                    final int SA_Learning = 0;//Multi-Agent = 0; single-agent learning = 1; dynamic thresh = 2
                     // Single-agent QLearning parameter for boat 1 with index 0;
                     final int learnerBoatNum = 0;
                     BoatProxy bLearner;
-                    if (SA_Learning==1)
+                    if (SA_Learning==1) //single-agent learning
                         bLearner = tokenProxies.get(learnerBoatNum);
 
+                    double totalRew = 0.0;
+                    double totalAccRew = 0.0;
+                    double totalTeamAccRew = 0.0;
+                    double totalTeamRew = 0.0;
+                    
                     class Service{
                         int serviceType; //{1:recharge, 2:DangeArea, 3:connecLost }
                         double[] probF = {0.9,0.4,0.2};
@@ -1450,6 +1599,9 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                         }
                         public int getServType(){
                             return this.serviceType;
+                        }
+                        public void setServType(int t){
+                            this.serviceType = t;
                         }
                         public double getProbF(){
                             return probF[serviceType-1];
@@ -1508,18 +1660,34 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                     // Statistics
                     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                     String strName = "";
-                    if (balk)
+                    if (balk) // for the last paper (mid sep.), balk should always be set to true
                     { 
-                        if (SA_Learning==1)strName = "/Users/Masoume/Desktop/ICAR2017/Experiment/resultsSABalk_Final.txt";
-                        else if (SA_Learning==0) strName = "/Users/Masoume/Desktop/ICAR2017/Experiment/resultsMABalk_Final.txt";
-                        else strName = "/Users/Masoume/Desktop/ICAR2017/Experiment/resultsDynaBalk_Final.txt";
-                    }else if (bDiscipline) {strName = "/Users/Masoume/Desktop/ICAR2017/Experiment/resultsSA-FIFO.txt";}
-                    else if (!bDiscipline){strName = "/Users/Masoume/Desktop/ICAR2017/Experiment/resultsSA-SJF.txt";}
-                    String inData = "maxIteration: "+maxIter+", lambda: "+lambda+", mu:"+mu;
+                        if (SA_Learning==1) strName = "/Users/Masoume/Desktop/Results-QLearning/Experiment/SALearning/results.txt";
+                        else if (SA_Learning==0) strName = "/Users/Masoume/Desktop/Results-QLearning/Experiment/MALearning/gLocal-B-new-60.txt";
+                        else strName = "/Users/Masoume/Desktop/Results-QLearning/Experiment/resultsDynaBalk_Final.txt";
+//                        if (SA_Learning==1)strName = "/Users/Masoume/Desktop/ICAR2017/Experiment/resultsSABalk_Final.txt";
+//                        else if (SA_Learning==0) strName = "/Users/Masoume/Desktop/ICAR2017/Experiment/resultsMABalk_Final.txt";
+//                        else strName = "/Users/Masoume/Desktop/ICAR2017/Experiment/resultsDynaBalk_Final.txt";
+                    }else if (bDiscipline) {strName = "/Users/Masoume/Desktop/Results-QLearning/Experiment/resultsSA-FIFO.txt";}
+                    else if (!bDiscipline){strName = "/Users/Masoume/Desktop/Results-QLearning/Experiment/resultsSA-SJF.txt";}
+                 //   String inData = "maxIteration: "+maxIter+", lambda: "+lambda+", mu:"+mu;
+                    
+//                    int h = countFile();
+//                    System.out.println("Dataset "+h);
+//                    double[][] inputData = loadDataSet(h);
+//                    for (int i=0;i<30;i++){
+//                        for (int j=0;j<3;j++) //arr-t type serv-t
+//                            System.out.print(inputData[i][j]+ " ");
+//                        System.out.println();
+//                    }
+                    
+                  //  String inData = "DataSet: "+ h +"maxIteration: "+maxIter+", lambda: "+lambda+", mu:"+mu;
+                    
                    //System.out.println("inData "+inData);
-                    String strN = "/Users/Masoume/Desktop/ICAR2017/Experiment/failStatistics.txt";
+                    String strN = "/Users/Masoume/Desktop/Results-QLearning/Experiment/failStatistics-B-new-60.txt";
+                    
                    // resultsFile(strN,"Type1    Type2   Type3");
-                    resultsFile(strName,inData);
+               //     resultsFile(strName,inData);
                     class BoatStatistic{//for one boat
                         
                         public int[][] iCounter = new int[3][2];//for each servType{0,1,2} #occurence & #balk 
@@ -1533,7 +1701,6 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                     double totalWaitingTime = 0.0;//sum of the waiting times for all customers
                     int numCustomersServed = 0;
                     int numCustomersBalked = 0;
-                    int totalThresholdValue = 0;
                     int iter = 0;
                     int iRand = 0;
                     double serviceTime;// = Double.POSITIVE_INFINITY;
@@ -1545,13 +1712,22 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                     while (timer.getElapsedTimeSecs()<setupTime);//setup times
 
                     int totalNumTasks = 0;
-                    if (SA_Learning==1){//for MA learning initialze in line 1157
-                        bLearner.initQLearning();
+                    if (SA_Learning==1){//for MA learning initialze in line 1579
+                        bLearner.initQLearning(stateType,mu,lambda);//if true only local state
                         totalNumTasks = tokenProxies.get(learnerBoatNum).getCurrentWaypoints().size();
                         bLearner.getIntStat().updateVal(0, totalNumTasks, 0);//initial values for learner (normal,tasks,qLength)
                     }
+                    //(arrival, service type, service time) should be read from the file: new 18 Sep
+//                    int h = countFile();
+//                    System.out.println("h "+h);
+//                    double[][] inputData = loadDataSet(h);
+//                    for (int i=0;i<30;i++){
+//                        for (int j=0;j<3;j++)
+//                            System.out.print(inputData[i][j]+ " ");
+//                        System.out.println();
+//                    }
                     nextArrival = timer.getElapsedTimeSecs() + StdRandom.exp(lambda);
-                   // nextArrival = timer.getElapsedTimeSecs() + StdRandom.gaussian(lambda, 100);
+               //     nextArrival = inputData[iter][0];
 
                     //Random selection of boats removing repetitive generations
                     ArrayList<Integer> boatList = new ArrayList<Integer>();//line 1157
@@ -1562,12 +1738,13 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                         finalStatistics[i] = new BoatStatistic();//initialze statistics for all boats
                         // initializing multi-agent learning params
                         if (SA_Learning==0){ 
-                            tokenProxies.get(i).initQLearning();   
+                            tokenProxies.get(i).initQLearning(stateType,mu,lambda);  //if true only local state 
                             totalNumTasks = tokenProxies.get(i).getCurrentWaypoints().size();
+                            System.out.println("totalNumTasks "+totalNumTasks);
                             tokenProxies.get(i).getIntStat().updateVal(0, totalNumTasks, 0);
                         }
                     }
-                    
+                    int currIter = 0;
                     while (iter<maxIter || !queueOfReq.isEmpty() || !sjfQueue.isEmpty()){
                         balkThreshold = 0.0;
                         // it's an arrival
@@ -1583,11 +1760,11 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                                     boatList.add(new Integer(i));                                  
                                 }
                                 // remove boats which are already in the queue
-                                if (bDiscipline){
+                                if (bDiscipline){ //if FIFO
                                     if (!queueOfReq.isEmpty()){
                                         for (Request e : queueOfReq) {
                                             int x;
-                                            System.out.println("e.iBoatId: "+e.iBoatId);
+                                            System.out.println("already inside queue e.iBoatId: "+e.iBoatId);
                                             for (int j=0;j<boatList.size();j++){ 
                                                 if (e.iBoatId==boatList.get(j)){
                                                     x = boatList.remove(j);
@@ -1597,7 +1774,7 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                                         }
                                     }
                                 }
-                                else {
+                                else { //if SJF
                                     if (!sjfQueue.isEmpty()){
                                         for (Request e : sjfQueue) {
                                             int x;
@@ -1623,8 +1800,15 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                                 else {bFF = true;}
                             }
                             if (bFF==false){
-                                serviceTime = StdRandom.exp(mu);
-                                if (bDiscipline){if (queueOfReq.isEmpty()) nextDeparture = nextArrival + serviceTime;}
+                                serviceTime = StdRandom.exp(mu);//should be read from dataset
+//                                if (iter<maxIter)
+//                                    serviceTime = inputData[iter][2];
+//                                else
+//                                    serviceTime = StdRandom.exp(mu);
+                                
+                                if (bDiscipline){
+                                    if (queueOfReq.isEmpty()) nextDeparture = nextArrival + serviceTime;
+                                }
                                 else{
                                     if (sjfQueue.isEmpty()) nextDeparture = nextArrival + serviceTime;
                                 }
@@ -1633,6 +1817,11 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
 
                                 //generate a random serviceType {1,2,3}
                                 Service TypeofRequest = new Service((new Random()).nextInt(3)+1);
+                                
+//                                if (iter<maxIter)
+//                                    TypeofRequest.setServType((int)inputData[iter][1]);
+                          
+                                saveDataSet(nextArrival,TypeofRequest.getServType(),serviceTime);
                                 
                                 int action = -1;
                                 BoatProxy bTmp = tokenProxies.get(iRand);
@@ -1664,36 +1853,49 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                                 finalStatistics[iRand].iCounter[TypeofRequest.getServType()-1][0]+=1;//boat #iRand made a req of type reqType
                                 if (bDiscipline){//FIFO
                                     BoatProxy tmpProxy = tokenProxies.get(iRand);
-                                    if ((!balk) || (queueOfReq.size()< balkThreshold) || (queueOfReq.isEmpty()) || (action==0)){ 
-                                        //new^^^^^
-                                        if ((SA_Learning==0)||((SA_Learning==1) && (iRand==learnerBoatNum))){
-                                            if (action==0){
-                                                    //update state value
-                                                    int[] nextState = tmpProxy.getBoatWorld().getNextState(action, tmpProxy.getIntStat().getStateArr());
-                                                    tmpProxy.getIntStat().updateVal(4, nextState[1], nextState[2]);//wait
-                                                    
-//                                                    queueOfReq.add(new Request(iRand,nextArrival,nextDeparture,serviceTime,TypeofRequest.getServType()));
-//                                                    tokenProxies.get(iRand).handleEvent(new ProxyEmergencyAbort(oe.getId(), oe.getMissionId()));
-                                            }
-//                                            else{//action==1 but Q is empty so it is a balk
-//                                                //update state value
-//                                                int[] nextState = tmpProxy.getBoatWorld().getNextState(action, tmpProxy.getIntStat().getStateArr());
-//                                                tmpProxy.getIntStat().updateVal(nextState[0], nextState[1], nextState[2]);
-//                                                //balk happend
-//                                                numCustomersBalked++;
-//                                                boatList.add(iRand);
-//                                                //boat #iRand balked a req of type serviceType
-//                                                finalStatistics[iRand].iCounter[TypeofRequest.getServType()-1][1]+=1;
+//                                    if ((!balk) || (queueOfReq.size()< balkThreshold) || (queueOfReq.isEmpty()) || (action==0)){ 
+//                                        //new^^^^^
+//                                        if ((SA_Learning==0)||((SA_Learning==1) && (iRand==learnerBoatNum))){
+//                                            if (action==0){
+//                                                    //update state value
+//                                                    int[] nextState = tmpProxy.getBoatWorld().getNextState(action, tmpProxy.getIntStat().getStateArr());
+//                                                    tmpProxy.getIntStat().updateVal(4, nextState[1], nextState[2]);//4=wait 
+//                                                    
+////                                                    queueOfReq.add(new Request(iRand,nextArrival,nextDeparture,serviceTime,TypeofRequest.getServType()));
+////                                                    tokenProxies.get(iRand).handleEvent(new ProxyEmergencyAbort(oe.getId(), oe.getMissionId()));
 //                                            }
-                                        }                                        
+////                                            else{//action==1 but Q is empty so it is a balk
+////                                                //update state value
+////                                                int[] nextState = tmpProxy.getBoatWorld().getNextState(action, tmpProxy.getIntStat().getStateArr());
+////                                                tmpProxy.getIntStat().updateVal(nextState[0], nextState[1], nextState[2]);
+////                                                //balk happend
+////                                                numCustomersBalked++;
+////                                                boatList.add(iRand);
+////                                                //boat #iRand balked a req of type serviceType
+////                                                finalStatistics[iRand].iCounter[TypeofRequest.getServType()-1][1]+=1;
+////                                            }
+//                                        }                                        
+//                                        queueOfReq.add(new Request(iRand,nextArrival,nextDeparture,serviceTime,TypeofRequest.getServType()));
+//                                        tokenProxies.get(iRand).handleEvent(new ProxyEmergencyAbort(oe.getId(), oe.getMissionId()));
+//                                       
+//                                    }
+                                    //new version with multiple learners at the same time
+                                    if ((!balk) || (queueOfReq.size()< balkThreshold) || (action==0)){
+                                        if ((SA_Learning==0)||((SA_Learning==1) && (iRand==learnerBoatNum))){
+                                            //update state value
+                                            int[] nextState = tmpProxy.getBoatWorld().getNextState(action, tmpProxy.getIntStat().getStateArr());
+                                            
+                                            double reward = tmpProxy.getBoatWorld().getNextReward(action,tmpProxy.getIntStat().getStateArr(),nextState,serviceTime,queueOfReq.size());
+                                            double this_Q = tmpProxy.getBoatWorld().getPolicy().getQValue( tmpProxy.getIntStat().getStateArr(), action );
+                                            tmpProxy.getIntStat().updateTotalRew(this_Q, reward);
+                                            
+                                            tmpProxy.getIntStat().updateVal(4, nextState[1], tmpProxy.getIntStat().getqsize()+1);//4=wait // needs to be fixed
+                                        }                                       
                                         queueOfReq.add(new Request(iRand,nextArrival,nextDeparture,serviceTime,TypeofRequest.getServType()));
                                         tokenProxies.get(iRand).handleEvent(new ProxyEmergencyAbort(oe.getId(), oe.getMissionId()));
-                                       
+
                                     }
-                                    else{ //balk//action==1
-                                        Random rand = new Random(); 
-                                        int ran = rand.nextInt(10)+1; //generate random num for probF
-                                        System.out.println("ran fail = "+ran);
+                                    else{//new version with multiple learners at the same time
                                         int rType = TypeofRequest.getServType();//tmpProxy.getIntStat().getReqTypeInt();
                                         boolean fail = false;
                                         int[] nextState;
@@ -1702,39 +1904,19 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                                             //update state value
                                             rType = tmpProxy.getIntStat().getReqTypeInt();
                                             nextState = tmpProxy.getBoatWorld().getNextState(action, tmpProxy.getIntStat().getStateArr());
-                                            tmpProxy.getIntStat().updateVal(nextState[0], nextState[1], nextState[2]); 
-                                        }   
-                                        switch(rType){
-                                            case 1:
-                                                //if (ran <= tmpProxy.getIntStat().P_Battery){//fail 0.9
-                                                if (ran <= 9){//fail 0.9
-                                                    fail = true;
-                                                }
-                                                //sim should be stopped
-                                                break;
-                                            case 2:
-                                                //if (ran <= tmpProxy.getIntStat().P_DangeArea){//fail 0.4
-                                                if (ran <= 4){
-                                                    fail = true;
-                                                }
-                                                //sim should be stopped
-                                                break;
-                                            case 3:
-                                                //if (ran <= tmpProxy.getIntStat().P_Connection){//fail 0.2
-                                                if (ran <= 2){
-                                                    fail = true;
-                                                }
-                                                //sim should be stopped
-                                                break;
-                                            default:
-                                                System.out.println("No Failure happend");  
-                                                fail = false;    
-                                                break;
-                                        }
-                                        if (fail){ //for MA and SA should be added if
-                                            if ((SA_Learning==0)||((SA_Learning==1) && (iRand==learnerBoatNum)))
-                                                {tmpProxy.getIntStat().setReqType(5);}//fail
-                                            boatFailed[iRand]++;
+                                            
+                                            double reward = tmpProxy.getBoatWorld().getNextReward(action,tmpProxy.getIntStat().getStateArr(),nextState,serviceTime,queueOfReq.size());
+                                            double this_Q = tmpProxy.getBoatWorld().getPolicy().getQValue( tmpProxy.getIntStat().getStateArr(), action );
+                                            tmpProxy.getIntStat().updateTotalRew(this_Q, reward);
+                                            
+                                            tmpProxy.getIntStat().updateVal(nextState[0], nextState[1], tmpProxy.getIntStat().getqsize()); // needs to be fixed
+                                                                                
+                                            if (nextState[0]==5){ //for MA and SA should be added if
+                                                boatFailed[iRand]++;
+                                            }
+                                            else{
+                                                System.out.println("No Failure happend"); 
+                                            }
                                         }
                                         boatList.add(iRand);
                                         numCustomersBalked++;
@@ -1742,6 +1924,58 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                                         //boat #iRand balked a req of type serviceType
                                         finalStatistics[iRand].iCounter[TypeofRequest.getServType()-1][1]+=1;
                                     }
+//                                    else{ //balk//action==1
+//                                        Random rand = new Random(); 
+//                                        int ran = rand.nextInt(10)+1; //generate random num for probF
+//                                        System.out.println("ran fail = "+ran);
+//                                        int rType = TypeofRequest.getServType();//tmpProxy.getIntStat().getReqTypeInt();
+//                                        boolean fail = false;
+//                                        int[] nextState;
+//                                        //check if it's Learning
+//                                        if ((SA_Learning==0)||((SA_Learning==1) && (iRand==learnerBoatNum))){
+//                                            //update state value
+//                                            rType = tmpProxy.getIntStat().getReqTypeInt();
+//                                            nextState = tmpProxy.getBoatWorld().getNextState(action, tmpProxy.getIntStat().getStateArr());
+//                                            tmpProxy.getIntStat().updateVal(nextState[0], nextState[1], tmpProxy.getIntStat().getqsize()); // needs to be fixed
+//                                        }   
+//                                        switch(rType){
+//                                            case 1:
+//                                                //if (ran <= tmpProxy.getIntStat().P_Battery){//fail 0.9
+//                                                if (ran <= 9){//fail 0.9
+//                                                    fail = true;
+//                                                }
+//                                                //sim should be stopped
+//                                                break;
+//                                            case 2:
+//                                                //if (ran <= tmpProxy.getIntStat().P_DangeArea){//fail 0.4
+//                                                if (ran <= 4){
+//                                                    fail = true;
+//                                                }
+//                                                //sim should be stopped
+//                                                break;
+//                                            case 3:
+//                                                //if (ran <= tmpProxy.getIntStat().P_Connection){//fail 0.2
+//                                                if (ran <= 2){
+//                                                    fail = true;
+//                                                }
+//                                                //sim should be stopped
+//                                                break;
+//                                            default:
+//                                                System.out.println("No Failure happend");  
+//                                                fail = false;    
+//                                                break;
+//                                        }
+//                                        if (fail){ //for MA and SA should be added if
+//                                            if ((SA_Learning==0)||((SA_Learning==1) && (iRand==learnerBoatNum)))
+//                                                {tmpProxy.getIntStat().setReqType(5);}//fail
+//                                            boatFailed[iRand]++;
+//                                        }
+//                                        boatList.add(iRand);
+//                                        numCustomersBalked++;
+//                                        //boatList.add(iRand);
+//                                        //boat #iRand balked a req of type serviceType
+//                                        finalStatistics[iRand].iCounter[TypeofRequest.getServType()-1][1]+=1;
+//                                    }
                                 }
                                 else{ //SJF
                                     if ((!balk) || (sjfQueue.size()< balkThreshold) || (sjfQueue.isEmpty())){ 
@@ -1764,81 +1998,90 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                                         finalStatistics[iRand].iCounter[TypeofRequest.getServType()-1][1]+=1;
                                     }
                                 }
-                                iter++;
+                                iter++;                               
                             }
                             nextArrival +=StdRandom.exp(lambda);
+//                            if (iter != currIter)
+//                                nextArrival = inputData[iter][0];
+//                            else if (iter<maxIter)
+//                                nextArrival = inputData[iter+1][0];
+//                            else 
+//                                nextArrival +=StdRandom.exp(lambda);
+//                            currIter = iter;
                         }
                         // it's a departure
                         else{
                             Request req = null;
-                            if (bDiscipline){
-                                System.out.println("queueOfReq size: "+queueOfReq.size());  
-                                req = new Request(queueOfReq.peek().iBoatId,queueOfReq.peek().dArrivalTime,queueOfReq.peek().dDepartureTime,queueOfReq.peek().dServiceTime,queueOfReq.peek().iServiceType);
-                                System.out.println("whome is removed: boat number "+req.iBoatId+" arrivalTime "+req.dArrivalTime+ " DepartureTime "+req.dDepartureTime+ " ServiceType "+req.iServiceType);
-                                queueOfReq.remove();
-                                //new^^^^^
-                                //if learner
-                                if ((SA_Learning==0)||((SA_Learning==1) && (req.iBoatId==learnerBoatNum))){//if MA or single
-                                    System.out.println("remains: "+remains);
-                                    System.out.println("prev remains: "+tokenProxies.get(req.iBoatId).getIntStat().getNumOfRemainingTasks());
-                                    //remains = tokenProxies.get(req.iBoatId).getCurrentWaypoints().size()
-                                    tokenProxies.get(req.iBoatId).getIntStat().updateVal(0, remains, queueOfReq.size());
+                            if (!queueOfReq.isEmpty()){ // for the previous experiments, the SJF queue also needs to be checked
+                                if (bDiscipline){
+                                    System.out.println("queueOfReq size: "+queueOfReq.size());  
+                                    req = new Request(queueOfReq.peek().iBoatId,queueOfReq.peek().dArrivalTime,queueOfReq.peek().dDepartureTime,queueOfReq.peek().dServiceTime,queueOfReq.peek().iServiceType);
+                                    System.out.println("whome is removed: boat number "+req.iBoatId+" arrivalTime "+req.dArrivalTime+ " DepartureTime "+req.dDepartureTime+ " ServiceType "+req.iServiceType);
+                                    queueOfReq.remove();
+                                    //new^^^^^
+                                    //if learner
+                                    if ((SA_Learning==0)||((SA_Learning==1) && (req.iBoatId==learnerBoatNum))){//if MA or single
+                                        System.out.println("remains: "+remains);
+                                        System.out.println("prev remains: "+tokenProxies.get(req.iBoatId).getIntStat().getNumOfRemainingTasks());
+                                        //remains = tokenProxies.get(req.iBoatId).getCurrentWaypoints().size()
+                                        tokenProxies.get(req.iBoatId).getIntStat().updateVal(0, remains, queueOfReq.size());//normal
+                                    }
+                                    //^^^^^^^^^^
                                 }
-                                //^^^^^^^^^^
+                                else{
+                                    System.out.println("sjfQueue size: "+sjfQueue.size());  
+                                    req = sjfQueue.peek();
+                                    nextDeparture = req.dDepartureTime;
+                                    //req = new Request(sjfQueue.peek().iBoatId,sjfQueue.peek().dArrivalTime,sjfQueue.peek().dDepartureTime,sjfQueue.peek().dServiceTime,sjfQueue.peek().iServiceType);
+                                    System.out.println("whome is removed: boat number "+req.iBoatId+" arrivalTime "+req.dArrivalTime+ " DepartureTime "+req.dDepartureTime+" ServiceTime " +req.dServiceTime+" ServiceType "+req.iServiceType);
+                                    sjfQueue.remove();
+                                }
+                                //the boat should resume the path
+                                BoatProxy inQB = tokenProxies.get(req.iBoatId);
+                                ArrayList<Position> currTasksPositions = new ArrayList<Position>();
+                                Set<BoatMarker> boatSet = decisions.keySet();
+                                BoatMarker bMarker;
+                                for (Iterator<BoatMarker> it = boatSet.iterator(); it.hasNext();) {
+                                    bMarker = it.next();
+                                    if (bMarker.getProxy() == inQB) {
+                                        currTasksPositions.addAll(decisions.get(bMarker));
+                                        break;
+                                    } 
+                                }
+
+                                Hashtable<ProxyInt, Path> proxyPathTemp = new Hashtable<ProxyInt, Path>();
+
+                                ArrayList<Location> tasksLocations = Conversion.positionToLocation(currTasksPositions);
+                                System.out.println("current tasks list: " + currTasksPositions);
+
+                                proxyPathTemp.put(inQB, new PathUtm(tasksLocations));
+
+                                ProxyExecutePath oEv1 = new ProxyExecutePath(oe.getId(), oe.getMissionId(), proxyPathTemp);
+
+                                System.out.println("boat "+req.iBoatId + " resumed");
+
+                                inQB.handleEvent(oEv1);
+
+                                //***********************************
+                                double wait = nextDeparture - req.dArrivalTime;
+                                totalWaitingTime += wait;
+                                numCustomersServed++;
+
+                                if (bDiscipline){
+                                    if (queueOfReq.isEmpty()) nextDeparture = Double.POSITIVE_INFINITY;
+                                    else nextDeparture += StdRandom.exp(mu); //nextDeparture += StdRandom.gaussian(mu,100);
+                                }
+                                else{
+                                    if (sjfQueue.isEmpty()) nextDeparture = Double.POSITIVE_INFINITY;
+                                    //else nextDeparture += StdRandom.exp(mu); //nextDeparture += StdRandom.gaussian(mu,100);
+                                    else {
+                                        nextDeparture += sjfQueue.peek().dServiceTime;
+                                        sjfQueue.peek().dDepartureTime = nextDeparture;
+                                    } //nextDeparture += StdRandom.gaussian(mu,100);
+                                }
                             }
-                            else{
-                                System.out.println("sjfQueue size: "+sjfQueue.size());  
-                                req = sjfQueue.peek();
-                                nextDeparture = req.dDepartureTime;
-                                //req = new Request(sjfQueue.peek().iBoatId,sjfQueue.peek().dArrivalTime,sjfQueue.peek().dDepartureTime,sjfQueue.peek().dServiceTime,sjfQueue.peek().iServiceType);
-                                System.out.println("whome is removed: boat number "+req.iBoatId+" arrivalTime "+req.dArrivalTime+ " DepartureTime "+req.dDepartureTime+" ServiceTime " +req.dServiceTime+" ServiceType "+req.iServiceType);
-                                sjfQueue.remove();
-                            }
-                            //the boat should resume the path
-                            BoatProxy inQB = tokenProxies.get(req.iBoatId);
-                            ArrayList<Position> currTasksPositions = new ArrayList<Position>();
-                            Set<BoatMarker> boatSet = decisions.keySet();
-                            BoatMarker bMarker;
-                            for (Iterator<BoatMarker> it = boatSet.iterator(); it.hasNext();) {
-                                bMarker = it.next();
-                                if (bMarker.getProxy() == inQB) {
-                                    currTasksPositions.addAll(decisions.get(bMarker));
-                                    break;
-                                } 
-                            }
-
-                            Hashtable<ProxyInt, Path> proxyPathTemp = new Hashtable<ProxyInt, Path>();
-
-                            ArrayList<Location> tasksLocations = Conversion.positionToLocation(currTasksPositions);
-                            System.out.println("current tasks list: " + currTasksPositions);
-
-                            proxyPathTemp.put(inQB, new PathUtm(tasksLocations));
-
-                            ProxyExecutePath oEv1 = new ProxyExecutePath(oe.getId(), oe.getMissionId(), proxyPathTemp);
-
-                            System.out.println("boat "+req.iBoatId + " resumed");
-
-                            inQB.handleEvent(oEv1);
-
-                            //***********************************
-                            double wait = nextDeparture - req.dArrivalTime;
-                            totalWaitingTime += wait;
-                            numCustomersServed++;
-
-                            if (bDiscipline){
-                                if (queueOfReq.isEmpty()) nextDeparture = Double.POSITIVE_INFINITY;
-                                else nextDeparture += StdRandom.exp(mu); //nextDeparture += StdRandom.gaussian(mu,100);
-                            }
-                            else{
-                                if (sjfQueue.isEmpty()) nextDeparture = Double.POSITIVE_INFINITY;
-                                //else nextDeparture += StdRandom.exp(mu); //nextDeparture += StdRandom.gaussian(mu,100);
-                                else {
-                                    nextDeparture += sjfQueue.peek().dServiceTime;
-                                    sjfQueue.peek().dDepartureTime = nextDeparture;
-                                } //nextDeparture += StdRandom.gaussian(mu,100);
-                            }
-                        }
-                       
+                            else {nextDeparture = Double.POSITIVE_INFINITY;}
+                        }                       
                         try {
                             Thread.sleep(1000);
                         } catch (InterruptedException ex) {
@@ -1855,6 +2098,15 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                     resultsFile(strName,"Total waiting time: "+totalWaitingTime + " min");
                     if (numCustomersServed>0) resultsFile(strName,"Avg waiting time: "+totalWaitingTime/numCustomersServed + " min");
                     resultsFile(strName,"Failure Boats: "+boatFailed[0]+", "+boatFailed[1]+", "+boatFailed[2]+", "+boatFailed[3]+", "+boatFailed[4]);
+                    for (int i=0;i<numofProxies;i++){
+                       totalTeamAccRew += tokenProxies.get(i).getIntStat().getTotalAccRew();
+                       totalTeamRew += tokenProxies.get(i).getIntStat().getTotalRew();
+                     //  System.out.println("Boat "+i);
+                     //  tokenProxies.get(i).getIntStat().showTotalRew();
+                    }
+                    resultsFile(strName,"Total team acc. rew: "+totalTeamAccRew);
+                    resultsFile(strName,"Total team rew: "+totalTeamRew);
+                    
                     //some extra statistics
                     int[] balkStatistics= new int[numType];//#balk of each req
                     for (int k=0;k<numType;k++)//num of req
@@ -1882,29 +2134,36 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
                     resultsFile(strN,stat);
                     
                     resultsFile(strName,"====================================");
-                    //BoatProxy inQB = tokenProxies.get(req.iBoatId);
-                    //ArrayList<Position> currTasksPositions = new ArrayList<Position>();
-                    Set<BoatMarker> boatSet = decisions.keySet();
-                    int countSet = 0;
-                    int setSize = boatSet.size();
-                    System.out.println("setSize "+setSize);
-                    BoatMarker bMarker;
-                    while (countSet<setSize){
-                        countSet = 0;
-                        for (Iterator<BoatMarker> it = boatSet.iterator(); it.hasNext();) {
-                            bMarker = it.next();
-                            if (bMarker.getProxy().getCurrentWaypoints().isEmpty()) {
-                                countSet++;
-                            } 
-                        }
-                    }
-                    System.out.println("countSet "+countSet);
+                    
                     PlanManager p = Engine.getInstance().getPlans().get(0);
                     p.abortMission();
                     //Engine.getInstance().abort(p);
-                    System.exit(0);
-                    //the whole plan should be aborted
-                    // means all boats completed their tasks
+                    System.exit(0); 
+                    
+                    //BoatProxy inQB = tokenProxies.get(req.iBoatId);
+                    //ArrayList<Position> currTasksPositions = new ArrayList<Position>();
+//                    Set<BoatMarker> boatSet = decisions.keySet();
+//                    int countSet = 0;
+//                    int setSize = boatSet.size();
+//                    System.out.println("setSize "+setSize);
+//                    BoatMarker bMarker;
+//                    while (countSet<setSize){
+//                        countSet = 0;
+//                        for (Iterator<BoatMarker> it = boatSet.iterator(); it.hasNext();) {
+//                            bMarker = it.next();
+//                            if (bMarker.getProxy().getCurrentWaypoints().isEmpty()) {
+//                                countSet++;
+//                            } 
+//                        }
+//                    }
+//                    System.out.println("countSet "+countSet);
+//                    //the whole plan should be aborted
+//                    // means all boats completed their tasks
+//                    PlanManager p = Engine.getInstance().getPlans().get(0);
+//                    p.abortMission();
+//                    //Engine.getInstance().abort(p);
+//                    System.exit(0);
+                    
                 }
             }).start();
             
@@ -3329,7 +3588,7 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
         FileWriter fw = null;
         try {
             //boolean bExist = false;
-            File file = new File("/Users/Masoume/Desktop/CoordinateBoat/total-team-acc-rew.txt");
+            File file = new File("/Users/Masoume/Desktop/CoordinateBoat/total-team-acc-rew-fullState.txt");
             if(!file.exists()){
                 file.createNewFile();
              //   bExist = true;
@@ -3360,7 +3619,7 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
         FileWriter fw = null;
         try {
             //boolean bExist = false;
-            File file = new File("/Users/Masoume/Desktop/CoordinateBoat/total-team-rew.txt");
+            File file = new File("/Users/Masoume/Desktop/CoordinateBoat/total-team-rew-fullState.txt");
             if(!file.exists()){
                 file.createNewFile();
              //   bExist = true;
@@ -3384,6 +3643,96 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
             }
         }
     }
+    
+    //@masoume
+    public void saveDataSet(double arrival,int reqType,double servTime) {
+       
+        FileWriter fw = null;
+        try {
+            //  File file = new File("C://myfile.txt");
+            boolean bExist = false;
+            File file = new File("/Users/Masoume/Desktop/Results-QLearning/Experiment/data5g.txt");
+            if(!file.exists()){
+                file.createNewFile();
+                bExist = true;
+            }   
+            else {bExist = true;}
+            fw = new FileWriter(file,true);
+            BufferedWriter bw = new BufferedWriter(fw);
+            PrintWriter pw = new PrintWriter(bw);
+ 
+            if (bExist){
+                pw.write(String.valueOf(arrival)+" ");
+                pw.write(String.valueOf(reqType)+" ");
+                pw.write(String.valueOf(servTime)+" ");
+                pw.println();  
+            }
+            
+            pw.close();
+            //System.out.println("Data successfully appended at the end of file");
+        } catch (IOException ex) {
+            Logger.getLogger(ProxyEventHandler.class.getName()).log(Level.SEVERE, null, ex);
+        } 
+    }
+    
+    public int countFile(){
+        int i=1;
+        
+        FileWriter fw = null;
+        FileReader fr = null;
+        try {
+            //  File file = new File("C://myfile.txt");
+            boolean bExist = false;
+            File file = new File("/Users/Masoume/Desktop/Results-QLearning/Experiment/count.txt");
+            if(!file.exists()){
+                file.createNewFile();               
+                bExist = true;
+            }   
+            else {
+                Scanner sc = new Scanner(file);
+                i=sc.nextInt();
+                sc.close();              
+                bExist = true;
+  
+            }
+            fw = new FileWriter(file,false);
+            
+            BufferedWriter bw = new BufferedWriter(fw);
+            PrintWriter pw = new PrintWriter(bw);
+ 
+            if (bExist){
+                if (i==20)
+                    pw.print(1);
+                else 
+                    pw.print(i+1);
+            }          
+            pw.close();
+            //System.out.println("Data successfully appended at the end of file");
+        } catch (IOException ex) {
+            Logger.getLogger(ProxyEventHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }        
+        return i;
+    }
+    
+    //@masoume
+    public double[][] loadDataSet(int i) {
+        try {
+            double[][] arrData = new double[30][3];
+            Scanner scan = new Scanner(new File("/Users/Masoume/Desktop/Results-QLearning/Experiment/data"+i+".txt"));
+            for (int k=0;k<30;k++){
+                for (int j=0;j<3;j++){
+                    arrData[k][j] = Double.parseDouble(scan.next());
+                }     
+            }
+            scan.close();
+            return arrData;
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(ProxyEventHandler.class.getName()).log(Level.SEVERE, null, ex);
+            return null;
+        }
+        
+    }
+    
     //@masoume
     public void getLocation(double x0, double y0, int radius) {
 
@@ -3433,13 +3782,7 @@ public class ProxyEventHandler implements EventHandlerInt, ProxyListenerInt, Inf
             //System.out.println("Data successfully appended at the end of file");
         } catch (IOException ex) {
             Logger.getLogger(ProxyEventHandler.class.getName()).log(Level.SEVERE, null, ex);
-        } finally {
-            try {
-                fw.close();
-            } catch (IOException ex) {
-                Logger.getLogger(ProxyEventHandler.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
+        } 
     }
     //@masoume
 //    public double pointToLineDistance(Point A, Point B, Point P) {

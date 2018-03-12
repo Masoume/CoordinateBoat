@@ -187,7 +187,7 @@ public class InterruptPanel extends javax.swing.JPanel implements PlanManagerLis
         if (boatsL.getValueIsAdjusting()) {
             boatsSelected = new ArrayList<ProxyInt>();
 
-            for (Object o : boatsL.getSelectedValues()) {
+            for (Object o : boatsL.getSelectedValuesList()) {
                 String s = (String) o;
                 boatsSelected.add(nameToProxy.get(s));
 

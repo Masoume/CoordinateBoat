@@ -27,21 +27,40 @@ public class BoatPolicy {
     
     int[] dimSize;
     int boatId;
+    int stateType;//0:LocalOnly 1:LocGlob 2:Full
     double[] qValues;//size of actions
     public Object qValuesTable_prev;
-    double qValuesTable[][][][];
+    double qValuesTable[][][][];//localGlobal
+    double qValuesTableLocal[][][];//new: for local only
+    double qValuesTableFull[][][][][][][][][][][];//new: for full state
     int numStates, numActions;
     boolean b = false;
     String QfileName = "";
+  //  String filePAth = System.getProperty ("user.dir");
 
-    BoatPolicy( int[] dimSize , int id) {
-	
-	this.dimSize = dimSize;
+    BoatPolicy( int[] dimSize , int id, int sType) {
+        this.dimSize = dimSize;
 	this.boatId = id;
+        this.stateType = sType;
 	// Create n-dimensional array with size given in dimSize array.
         //qValuesTable = Array.newInstance( double.class, dimSize );
-        qValuesTable = new double[this.dimSize[0]][this.dimSize[1]][this.dimSize[2]][this.dimSize[3]];
-                
+        if (this.stateType==0)//localOnly
+        {
+            qValuesTableLocal = new double[this.dimSize[0]][this.dimSize[1]][this.dimSize[2]];
+            this.QfileName = "/Users/Masoume/Desktop/CoordinateBoat/myfileLocal"+id;         
+          //  this.QfileName = filePAth+"/myfileLocal"+id;
+        }
+        else if (this.stateType==1)//localGlobal
+        {
+            qValuesTable = new double[this.dimSize[0]][this.dimSize[1]][this.dimSize[2]][this.dimSize[3]];
+            this.QfileName = "/Users/Masoume/Desktop/CoordinateBoat/myfile"+id;
+           // this.QfileName = filePAth+"/myfile"+id;
+        }
+        else //central full state
+        {
+            qValuesTableFull = new double[this.dimSize[0]][this.dimSize[1]][this.dimSize[2]][this.dimSize[3]][this.dimSize[4]][this.dimSize[5]][this.dimSize[6]][this.dimSize[7]][this.dimSize[8]][this.dimSize[9]][this.dimSize[10]];
+            this.QfileName = "/Users/Masoume/Desktop/CoordinateBoat/myfileFull";
+        }       
 	// Get number of states.
 	numStates = dimSize[0];
 	for( int j = 1 ; j < dimSize.length - 1 ; j++)
@@ -49,16 +68,40 @@ public class BoatPolicy {
 	
 	// Get number of actions.
 	numActions = dimSize[dimSize.length - 1]; 
-        
-        this.QfileName = "/Users/Masoume/Desktop/CoordinateBoat/myfile"+id;
-        
-    //    b = this.readFromMyfile();
-        
+        System.out.println("QfileName: "+QfileName);
     }
+//    BoatPolicy( int[] dimSize , int id, boolean local) {
+//	
+//	this.dimSize = dimSize;
+//	this.boatId = id;
+//        this.localOnly = local;
+//	// Create n-dimensional array with size given in dimSize array.
+//        //qValuesTable = Array.newInstance( double.class, dimSize );
+//        if (!this.localOnly){
+//            qValuesTable = new double[this.dimSize[0]][this.dimSize[1]][this.dimSize[2]][this.dimSize[3]];
+//            this.QfileName = "/Users/Masoume/Desktop/CoordinateBoat/myfile"+id;
+//        }
+//        else {
+//            qValuesTableLocal = new double[this.dimSize[0]][this.dimSize[1]][this.dimSize[2]];
+//            this.QfileName = "/Users/Masoume/Desktop/CoordinateBoat/myfileLocal"+id;
+//        }
+//        
+//	// Get number of states.
+//	numStates = dimSize[0];
+//	for( int j = 1 ; j < dimSize.length - 1 ; j++)
+//	    numStates *= dimSize[j];
+//	
+//	// Get number of actions.
+//	numActions = dimSize[dimSize.length - 1]; 
+//        System.out.println("QfileName: "+QfileName);
+//     // this.QfileName = "/Users/Masoume/Desktop/CoordinateBoat/myfile"+id;
+//        
+//    //    b = this.readFromMyfile();
+//        
+//    }
     public void initValues( double initValue ) {
 	int i;
 	int state[] = new int[dimSize.length - 1];//the last dimension of dimSize is action
-       // b = this.readFromMyfile();
         b = loadQValue();
 	System.out.println( "number of States: " + numStates ); 
         
@@ -100,18 +143,70 @@ public class BoatPolicy {
 	return state;
     }
     private void setQValuesTable(int[] state,int action, double val){
-        int i_0 = state[0];
-        int i_1 = state[1];
-        int i_2 = state[2];
-        qValuesTable[i_0][i_1][i_2][action] = val;
+        if (stateType==0){//localOnly
+            int i_0 = state[0];
+            int i_1 = state[1];
+            qValuesTableLocal[i_0][i_1][action] = val;
+        }else if (stateType==1){ //localGlobal
+            int i_0 = state[0];
+            int i_1 = state[1];
+            int i_2 = state[2];
+            qValuesTable[i_0][i_1][i_2][action] = val;
+        }else{
+            int i_0 = state[0];
+            int i_1 = state[1];
+            int i_2 = state[2];
+            int i_3 = state[3];
+            int i_4 = state[4];
+            int i_5 = state[5];
+            int i_6 = state[6];
+            int i_7 = state[7];
+            int i_8 = state[8];
+            int i_9 = state[9];
+            qValuesTableFull[i_0][i_1][i_2][i_3][i_4][i_5][i_6][i_7][i_8][i_9][action] = val;
+        }
+        
+//        if (localOnly){
+//            int i_0 = state[0];
+//            int i_1 = state[1];
+//            qValuesTableLocal[i_0][i_1][action] = val;
+//        }
+//        else{
+//            int i_0 = state[0];
+//            int i_1 = state[1];
+//            int i_2 = state[2];
+//            qValuesTable[i_0][i_1][i_2][action] = val;
+//        }
     }
     private double[] myQValues( int[] state ) {
-	int i_0 = state[0];
-        int i_1 = state[1];
-        int i_2 = state[2];
-        //int i_3 = state[3];
-	double[] retQ = {qValuesTable[i_0][i_1][i_2][0],qValuesTable[i_0][i_1][i_2][1]};
-        return retQ;
+        if (stateType==0){//localOnly
+            int i_0 = state[0];
+            int i_1 = state[1];
+            double[] retQ = {qValuesTableLocal[i_0][i_1][0],qValuesTableLocal[i_0][i_1][1]};//,qValuesTableLocal[i_0][i_1][2]};
+            return retQ;
+        }
+        else if (stateType==1) {//localGlobal
+            int i_0 = state[0];
+            int i_1 = state[1];
+            int i_2 = state[2];
+            //int i_3 = state[3];
+            double[] retQ = {qValuesTable[i_0][i_1][i_2][0],qValuesTable[i_0][i_1][i_2][1]};//,qValuesTable[i_0][i_1][i_2][2]};
+            return retQ;
+        }
+        else{//fullState
+            int i_0 = state[0];
+            int i_1 = state[1];
+            int i_2 = state[2];
+            int i_3 = state[3];
+            int i_4 = state[4];
+            int i_5 = state[5];
+            int i_6 = state[6];
+            int i_7 = state[7];
+            int i_8 = state[8];
+            int i_9 = state[9];
+            double[] retQ = {qValuesTableFull[i_0][i_1][i_2][i_3][i_4][i_5][i_6][i_7][i_8][i_9][0],qValuesTableFull[i_0][i_1][i_2][i_3][i_4][i_5][i_6][i_7][i_8][i_9][1]};
+            return retQ;
+        }
         
 //	for( i = 0 ; i < dimSize.length - 2 ; i++ ) {
 //	    //descend in each dimension
@@ -120,23 +215,94 @@ public class BoatPolicy {
 //	//at last dimension of Array get QValues.
 //	return (double[]) Array.get( curTable, state[i] );
     }
+    
     public double[] getQValuesAt( int[] state ) {
-	System.out.println(">>getQValuesAt");
-	
-        int i_0 = state[0];
-        int i_1 = state[1];
-        int i_2 = state[2];
-	
-	double[] returnValues;
-        
-	qValues[0] = qValuesTable[i_0][i_1][i_2][0];
-        qValues[1] = qValuesTable[i_0][i_1][i_2][1];
-	returnValues = new double[ qValues.length ];
-	System.arraycopy( qValues, 0, returnValues, 0, qValues.length );
-        System.out.println("getQValuesAt<<");
-	return returnValues;
+        System.out.println(">>getQValuesAt");
+	if (stateType==0)//localOnly
+        {
+            int i_0 = state[0];
+            int i_1 = state[1];
+
+            double[] returnValues;
+
+            qValues[0] = qValuesTableLocal[i_0][i_1][0];
+            qValues[1] = qValuesTableLocal[i_0][i_1][1];
+      //      qValues[2] = qValuesTableLocal[i_0][i_1][2];
+            returnValues = new double[ qValues.length ];
+            System.arraycopy( qValues, 0, returnValues, 0, qValues.length );
+            System.out.println("getQValuesAt<<");
+            return returnValues;
+        }
+        else if (stateType==1){//localGlobal
+            int i_0 = state[0];
+            int i_1 = state[1];
+            int i_2 = state[2];
+
+            double[] returnValues;
+
+            qValues[0] = qValuesTable[i_0][i_1][i_2][0];
+            qValues[1] = qValuesTable[i_0][i_1][i_2][1];
+       //     qValues[2] = qValuesTable[i_0][i_1][i_2][2];
+            returnValues = new double[ qValues.length ];
+            System.arraycopy( qValues, 0, returnValues, 0, qValues.length );
+            System.out.println("getQValuesAt<<");
+            return returnValues;
+        }
+        else{//fullState
+            int i_0 = state[0];
+            int i_1 = state[1];
+            int i_2 = state[2];
+            int i_3 = state[3];
+            int i_4 = state[4];
+            int i_5 = state[5];
+            int i_6 = state[6];
+            int i_7 = state[7];
+            int i_8 = state[8];
+            int i_9 = state[9];
+
+            double[] returnValues;
+
+            qValues[0] = qValuesTableFull[i_0][i_1][i_2][i_3][i_4][i_5][i_6][i_7][i_8][i_9][0];
+            qValues[1] = qValuesTableFull[i_0][i_1][i_2][i_3][i_4][i_5][i_6][i_7][i_8][i_9][1];
+   //         qValues[2] = qValuesTableFull[i_0][i_1][i_2][i_3][i_4][i_5][i_6][i_7][i_8][i_9][2];
+            returnValues = new double[ qValues.length ];
+            System.arraycopy( qValues, 0, returnValues, 0, qValues.length );
+            System.out.println("getQValuesAt<<");
+            return returnValues;
+        }
     }
     
+ /*   public double[] getQValuesAt( int[] state ) {
+	System.out.println(">>getQValuesAt");
+	if (localOnly)
+        {
+            int i_0 = state[0];
+            int i_1 = state[1];
+
+            double[] returnValues;
+
+            qValues[0] = qValuesTableLocal[i_0][i_1][0];
+            qValues[1] = qValuesTableLocal[i_0][i_1][1];
+            returnValues = new double[ qValues.length ];
+            System.arraycopy( qValues, 0, returnValues, 0, qValues.length );
+            System.out.println("getQValuesAt<<");
+            return returnValues;
+        }
+        else{
+            int i_0 = state[0];
+            int i_1 = state[1];
+            int i_2 = state[2];
+
+            double[] returnValues;
+
+            qValues[0] = qValuesTable[i_0][i_1][i_2][0];
+            qValues[1] = qValuesTable[i_0][i_1][i_2][1];
+            returnValues = new double[ qValues.length ];
+            System.arraycopy( qValues, 0, returnValues, 0, qValues.length );
+            System.out.println("getQValuesAt<<");
+            return returnValues;
+        }
+    }*/
 //    public double[] getQValuesAt( int[] state ) {
 //	System.out.println(">>getQValuesAt");
 //	int i;
@@ -228,9 +394,7 @@ public class BoatPolicy {
     }
     
     public void saveQValues() {
-        PrintWriter writer = null;
-        try {
-            writer = new PrintWriter(new File(QfileName+".txt"));
+        try (PrintWriter writer = new PrintWriter(new File(QfileName+".txt"))) {
             int state[] = new int[dimSize.length - 1];
             for( int j = 0 ; j < numStates ; j++ ) {
                 for (int i=0;i<qValues.length;i++)
@@ -242,8 +406,6 @@ public class BoatPolicy {
             writer.close();  //close the writer      
         } catch (FileNotFoundException ex) {
             Logger.getLogger(BoatPolicy.class.getName()).log(Level.SEVERE, null, ex);
-        } finally {
-            writer.close();
         }
     }
     public boolean loadQValue() {
@@ -265,16 +427,6 @@ public class BoatPolicy {
                 state = getNextState( state );
             }
             scan.close();
-//            int state2[] = new int[dimSize.length - 1];
-//            for( int j = 0 ; j < numStates ; j++ ) {
-//                
-//                qValues = myQValues(state2 );
-//                
-//                for (int k=0;k<numActions;k++)
-//                    System.out.println("qValues["+k+"]="+qValues[k]+" in state: "+ state2[0]+" "+state2[1]+" "+state2[2]);
-//                
-//                state2 = getNextState( state2 );
-//            }
             return true;
         } catch (FileNotFoundException ex) {
             Logger.getLogger(BoatPolicy.class.getName()).log(Level.SEVERE, null, ex);
@@ -285,16 +437,12 @@ public class BoatPolicy {
     
     public void writeInFile(){
         try{
-         FileOutputStream fos= new FileOutputStream("/Users/Masoume/Desktop/CoordinateBoat/myfile");
-         ObjectOutputStream oos= new ObjectOutputStream(fos);
-         oos.writeObject(this.qValuesTable);
-       //  System.out.println(Arrays.deepToString((Object[]) qValuesTable));
-//         oos.writeObject(Arrays.deepToString((Double[])this.qValuesTable));
-     //    oos.writeObject(this.qValuesTable);
-         oos.close();
-         fos.close();
+            try (FileOutputStream fos = new FileOutputStream("/Users/Masoume/Desktop/CoordinateBoat/myfile"); 
+                    ObjectOutputStream oos = new ObjectOutputStream(fos)) {
+                oos.writeObject(this.qValuesTable);
+            }
        }catch(IOException ioe){
-            ioe.printStackTrace();
+           Logger.getLogger(BoatPolicy.class.getName()).log(Level.SEVERE, null, ioe);
        }
     }
     

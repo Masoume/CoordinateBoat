@@ -97,6 +97,7 @@ public class BoatProxy extends Thread implements ProxyInt {
     private int boatSt = 1;//unfinished
     private int currIntrst = intrSt;
     private int currBoatSt = boatSt;
+    public int reqTypeInt;//0,1,2,3,4,5 //boat req for full state
     private boolean finalDecision = false; // continue = false, interrupt = true
     private BoatState bInState;// = new BoatState();
     private BoatWorld bWorld;// = new BoatWorld();
@@ -1181,10 +1182,10 @@ public class BoatProxy extends Thread implements ProxyInt {
         this.batchtype = batchtype;
     }
 
-    public void initQLearning(){
+    public void initQLearning(int sType,double wt,double at){
         //initialize the QLearning parameters
-        bInState = new BoatState();
-        bWorld = new BoatWorld(this.getBoatNo());
+        bInState = new BoatState(this.getBoatNo(),sType);//only local if 0; if 1 localGlob; if 2 fullState
+        bWorld = new BoatWorld(this.getBoatNo(),sType,wt,at);
     }
     
     @Override
